@@ -1,283 +1,303 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Search,
-  Filter,
   PenLine,
-  Eye,
-  Heart,
-  MessageSquare,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  AlertCircle,
+  Pencil,
+  Trash2,
+  X,
+  LockKeyhole,
 } from "lucide-vue-next";
+
+import {
+  deletePost,
+  getPosts,
+} from "@/api/community";
 
 const route = useRoute();
 const router = useRouter();
 
 const POSTS_PER_PAGE = 5;
 
-const categories = [
-  { key: "all", label: "전체" },
-  { key: "restaurant", label: "맛집" },
-  { key: "tour", label: "관광" },
-  { key: "festival", label: "축제" },
-  { key: "life", label: "생활" },
-  { key: "question", label: "질문" },
-];
-
-const posts = ref([
-  {
-    content_id: 1,
-    category: "restaurant",
-    category_label: "맛집",
-    title: "구미 인동 신규 라멘집 발견 🍜 강추합니다",
-    content:
-      "인동 CGV 근처에 최근 오픈한 라멘집 다녀왔어요. 육수가 진하고 면도 쫄깃해서 만족스러웠습니다.",
-    author: "익명",
-    views: 847,
-    like_count: 124,
-    comment_count: 34,
-    created_at: "2026-07-13T15:30:00",
-  },
-  {
-    content_id: 2,
-    category: "tour",
-    category_label: "관광",
-    title: "금오산 등산 코스 완전 정복 가이드 (초보~중급)",
-    content:
-      "금오산을 여러 번 다녀온 경험을 바탕으로 초보자부터 중급자까지 이용하기 좋은 코스를 정리했습니다.",
-    author: "익명",
-    views: 1200,
-    like_count: 287,
-    comment_count: 62,
-    created_at: "2026-07-12T10:10:00",
-  },
-  {
-    content_id: 3,
-    category: "festival",
-    category_label: "축제",
-    title: "낙동강 벚꽃 축제 일정 공유해요 🌸",
-    content:
-      "올해 구미 벚꽃 축제 일정과 주요 프로그램을 정리했습니다. 방문 전에 교통 통제 구간도 확인해보세요.",
-    author: "익명",
-    views: 2200,
-    like_count: 445,
-    comment_count: 98,
-    created_at: "2026-07-11T09:20:00",
-  },
-  {
-    content_id: 4,
-    category: "restaurant",
-    category_label: "맛집",
-    title: "구미역 근처 공부하기 좋은 카페 모음",
-    content:
-      "구미역 반경 500m 안에서 콘센트와 좌석이 넉넉하고 공부하기 좋은 카페를 정리했습니다.",
-    author: "익명",
-    views: 934,
-    like_count: 167,
-    comment_count: 45,
-    created_at: "2026-07-10T13:40:00",
-  },
-  {
-    content_id: 5,
-    category: "life",
-    category_label: "생활",
-    title: "구미 시내버스 이용할 때 알아두면 좋은 팁",
-    content:
-      "환승 시간, 자주 이용하는 노선, 막차 시간 확인 방법 등 구미 시내버스 이용 팁을 정리했습니다.",
-    author: "익명",
-    views: 623,
-    like_count: 85,
-    comment_count: 21,
-    created_at: "2026-07-09T18:00:00",
-  },
-  {
-    content_id: 6,
-    category: "question",
-    category_label: "질문",
-    title: "구미에서 혼자 가기 좋은 식당 추천해주세요",
-    content:
-      "혼자 식사하기 편하고 가격도 부담스럽지 않은 식당을 찾고 있습니다. 인동이나 구미역 근처면 좋겠습니다.",
-    author: "익명",
-    views: 512,
-    like_count: 43,
-    comment_count: 31,
-    created_at: "2026-07-08T12:25:00",
-  },
-  {
-    content_id: 7,
-    category: "tour",
-    category_label: "관광",
-    title: "구미 야경 보기 좋은 장소가 어디인가요?",
-    content:
-      "차로 이동할 수 있고 주차가 편한 야경 명소를 찾고 있습니다. 가족과 함께 가기 좋은 곳이면 좋겠습니다.",
-    author: "익명",
-    views: 771,
-    like_count: 91,
-    comment_count: 27,
-    created_at: "2026-07-07T20:05:00",
-  },
-  {
-    content_id: 8,
-    category: "festival",
-    category_label: "축제",
-    title: "이번 주말 구미 행사 정보 정리",
-    content:
-      "이번 주말에 가족과 함께 방문할 만한 구미 지역 행사와 체험 프로그램을 정리했습니다.",
-    author: "익명",
-    views: 1084,
-    like_count: 143,
-    comment_count: 39,
-    created_at: "2026-07-06T11:15:00",
-  },
-]);
+const posts = ref([]);
+const totalPosts = ref(0);
+const isLoading = ref(false);
+const errorMessage = ref("");
 
 const searchInput = ref(
-  typeof route.query.keyword === "string" ? route.query.keyword : "",
+  typeof route.query.keyword === "string"
+    ? route.query.keyword
+    : "",
 );
-const appliedKeyword = ref(searchInput.value.trim());
-const selectedCategory = ref(
-  typeof route.params.category === "string" ? route.params.category : "all",
+
+const currentPage = ref(
+  Number.isInteger(Number(route.query.page)) &&
+    Number(route.query.page) > 0
+    ? Number(route.query.page)
+    : 1,
 );
-const selectedSort = ref("latest");
-const currentPage = ref(1);
 
-const filteredPosts = computed(() => {
-  const keyword = appliedKeyword.value.toLowerCase();
-
-  let result = posts.value.filter((post) => {
-    const matchesCategory =
-      selectedCategory.value === "all" ||
-      post.category === selectedCategory.value;
-
-    const searchableText = `${post.title} ${post.content}`.toLowerCase();
-    const matchesKeyword = !keyword || searchableText.includes(keyword);
-
-    return matchesCategory && matchesKeyword;
-  });
-
-  if (selectedSort.value === "popular") {
-    return [...result].sort((a, b) => b.views - a.views);
-  }
-
-  return [...result].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at),
-  );
-});
+const isDeleteModalOpen = ref(false);
+const deleteTargetPost = ref(null);
+const deletePassword = ref("");
+const deleteErrorMessage = ref("");
+const isDeleting = ref(false);
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredPosts.value.length / POSTS_PER_PAGE)),
+  Math.max(1, Math.ceil(totalPosts.value / POSTS_PER_PAGE)),
 );
-
-const paginatedPosts = computed(() => {
-  const startIndex = (currentPage.value - 1) * POSTS_PER_PAGE;
-  return filteredPosts.value.slice(
-    startIndex,
-    startIndex + POSTS_PER_PAGE,
-  );
-});
 
 const pageNumbers = computed(() =>
-  Array.from({ length: totalPages.value }, (_, index) => index + 1),
+  Array.from(
+    { length: totalPages.value },
+    (_, index) => index + 1,
+  ),
 );
-
-const formatNumber = (value) => {
-  if (value >= 1000) {
-    const converted = value / 1000;
-    return `${Number.isInteger(converted) ? converted : converted.toFixed(1)}K`;
-  }
-
-  return value.toLocaleString("ko-KR");
-};
 
 const formatDate = (dateTime) => {
   if (!dateTime) return "";
-  return dateTime.slice(0, 10).replaceAll("-", ".");
+  return String(dateTime)
+    .slice(0, 10)
+    .replaceAll("-", ".");
 };
 
-const truncateContent = (content, maxLength = 70) => {
-  if (!content || content.length <= maxLength) return content;
-  return `${content.slice(0, maxLength)}...`;
+const buildQuery = () => {
+  const query = {};
+
+  if (searchInput.value.trim()) {
+    query.keyword = searchInput.value.trim();
+  }
+
+  if (currentPage.value > 1) {
+    query.page = String(currentPage.value);
+  }
+
+  return query;
 };
 
-const submitSearch = () => {
-  appliedKeyword.value = searchInput.value.trim();
+const fetchPosts = async () => {
+  isLoading.value = true;
+  errorMessage.value = "";
+
+  try {
+    const data = await getPosts({
+      page: currentPage.value,
+      size: POSTS_PER_PAGE,
+      filter: "",
+      search: searchInput.value.trim(),
+    });
+
+    posts.value = Array.isArray(data?.posts)
+      ? data.posts
+      : [];
+
+    totalPosts.value = Number(data?.total) || 0;
+
+    if (
+      currentPage.value > totalPages.value &&
+      totalPosts.value > 0
+    ) {
+      currentPage.value = totalPages.value;
+
+      await router.replace({
+        query: buildQuery(),
+      });
+
+      await fetchPosts();
+    }
+  } catch (error) {
+    console.error("게시글 목록 조회 실패:", error);
+
+    posts.value = [];
+    totalPosts.value = 0;
+
+    if (!error.response) {
+      errorMessage.value =
+        "백엔드 서버에 연결할 수 없습니다. FastAPI 실행 상태를 확인해주세요.";
+    } else {
+      errorMessage.value =
+        error.response?.data?.detail ||
+        "게시글 목록을 불러오지 못했습니다.";
+    }
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const submitSearch = async () => {
   currentPage.value = 1;
 
-  router.replace({
-    query: appliedKeyword.value
-      ? { ...route.query, keyword: appliedKeyword.value }
-      : {},
+  await router.replace({
+    query: buildQuery(),
   });
+
+  await fetchPosts();
 };
 
-const selectCategory = (categoryKey) => {
-  selectedCategory.value = categoryKey;
-  currentPage.value = 1;
-
-  const query = appliedKeyword.value
-    ? { keyword: appliedKeyword.value }
-    : {};
-
-  if (categoryKey === "all") {
-    router.push({ name: "community", query });
+const goToPage = async (pageNumber) => {
+  if (
+    pageNumber < 1 ||
+    pageNumber > totalPages.value ||
+    pageNumber === currentPage.value
+  ) {
     return;
   }
 
-  router.push({
-    name: "community-category",
-    params: { category: categoryKey },
-    query,
-  });
-};
-
-const goToPage = (pageNumber) => {
-  if (pageNumber < 1 || pageNumber > totalPages.value) return;
-
   currentPage.value = pageNumber;
-  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  await router.replace({
+    query: buildQuery(),
+  });
+
+  await fetchPosts();
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
 };
 
 const goToDetail = (post) => {
   router.push({
     name: "community-detail",
     params: {
-      category: post.category,
-      id: post.content_id,
+      category: "all",
+      id: post.id,
     },
   });
 };
 
 const goToWrite = () => {
-  router.push({ name: "community-write" });
+  router.push({
+    name: "community-write",
+  });
+};
+
+const goToEdit = (post) => {
+  router.push({
+    name: "community-edit",
+    params: {
+      id: post.id,
+    },
+  });
+};
+
+const stopCardEvent = (event) => {
+  event.stopPropagation();
+};
+
+const openDeleteModal = (post) => {
+  deleteTargetPost.value = post;
+  deletePassword.value = "";
+  deleteErrorMessage.value = "";
+  isDeleteModalOpen.value = true;
+};
+
+const closeDeleteModal = () => {
+  if (isDeleting.value) return;
+
+  isDeleteModalOpen.value = false;
+  deleteTargetPost.value = null;
+  deletePassword.value = "";
+  deleteErrorMessage.value = "";
+};
+
+const confirmDelete = async () => {
+  if (!deleteTargetPost.value || isDeleting.value) return;
+
+  if (deletePassword.value.length < 4) {
+    deleteErrorMessage.value =
+      "비밀번호를 4자 이상 입력해주세요.";
+    return;
+  }
+
+  isDeleting.value = true;
+  deleteErrorMessage.value = "";
+
+  try {
+    await deletePost(
+      deleteTargetPost.value.id,
+      deletePassword.value,
+    );
+
+    window.alert("게시글이 삭제되었습니다.");
+
+    closeDeleteModal();
+
+    if (
+      posts.value.length === 1 &&
+      currentPage.value > 1
+    ) {
+      currentPage.value -= 1;
+
+      await router.replace({
+        query: buildQuery(),
+      });
+    }
+
+    await fetchPosts();
+  } catch (error) {
+    console.error("게시글 삭제 실패:", error);
+
+    const status = error.response?.status;
+
+    if (status === 403) {
+      deleteErrorMessage.value =
+        "비밀번호가 일치하지 않습니다.";
+    } else if (status === 404) {
+      deleteErrorMessage.value =
+        "이미 삭제되었거나 존재하지 않는 게시글입니다.";
+    } else if (!error.response) {
+      deleteErrorMessage.value =
+        "백엔드 서버에 연결할 수 없습니다.";
+    } else {
+      deleteErrorMessage.value =
+        error.response?.data?.detail ||
+        "게시글 삭제에 실패했습니다.";
+    }
+  } finally {
+    isDeleting.value = false;
+  }
 };
 
 watch(
-  () => route.params.category,
-  (category) => {
-    selectedCategory.value =
-      typeof category === "string" ? category : "all";
+  () => route.query.keyword,
+  async (keyword) => {
+    const nextKeyword =
+      typeof keyword === "string" ? keyword : "";
+
+    if (searchInput.value === nextKeyword) return;
+
+    searchInput.value = nextKeyword;
     currentPage.value = 1;
+
+    await fetchPosts();
   },
 );
 
 watch(
-  () => route.query.keyword,
-  (keyword) => {
-    const nextKeyword = typeof keyword === "string" ? keyword : "";
-    searchInput.value = nextKeyword;
-    appliedKeyword.value = nextKeyword.trim();
-    currentPage.value = 1;
+  () => route.query.page,
+  async (page) => {
+    const nextPage =
+      Number.isInteger(Number(page)) &&
+      Number(page) > 0
+        ? Number(page)
+        : 1;
+
+    if (currentPage.value === nextPage) return;
+
+    currentPage.value = nextPage;
+
+    await fetchPosts();
   },
 );
 
-watch(totalPages, (pageCount) => {
-  if (currentPage.value > pageCount) {
-    currentPage.value = pageCount;
-  }
-});
+onMounted(fetchPosts);
 </script>
 
 <template>
@@ -289,67 +309,83 @@ watch(totalPages, (pageCount) => {
           <p>구미 시민과 여행자가 함께하는 정보 공간</p>
         </div>
 
-        <button type="button" class="write-button" @click="goToWrite">
+        <button
+          type="button"
+          class="write-button"
+          @click="goToWrite"
+        >
           <PenLine :size="17" />
           <span>글쓰기</span>
         </button>
       </header>
 
-      <section class="filter-panel">
-        <form class="search-form" @submit.prevent="submitSearch">
+      <section class="search-panel">
+        <form
+          class="search-form"
+          @submit.prevent="submitSearch"
+        >
           <div class="search-input-wrapper">
-            <Search class="search-icon" :size="20" />
+            <Search :size="20" />
+
             <input
               v-model="searchInput"
               type="search"
-              placeholder="제목, 내용으로 검색..."
+              placeholder="제목으로 검색..."
               aria-label="게시글 검색"
             />
           </div>
 
-          <button type="submit" class="search-button">검색</button>
+          <button
+            type="submit"
+            class="search-button"
+            :disabled="isLoading"
+          >
+            검색
+          </button>
         </form>
-
-        <div class="filter-row">
-          <div class="category-filter">
-            <Filter :size="17" class="filter-icon" />
-
-            <button
-              v-for="category in categories"
-              :key="category.key"
-              type="button"
-              :class="[
-                'category-button',
-                { active: selectedCategory === category.key },
-              ]"
-              @click="selectCategory(category.key)"
-            >
-              {{ category.label }}
-            </button>
-          </div>
-
-          <div class="sort-wrapper">
-            <select
-              v-model="selectedSort"
-              aria-label="게시글 정렬"
-              @change="currentPage = 1"
-            >
-              <option value="latest">최신순</option>
-              <option value="popular">조회순</option>
-            </select>
-            <ChevronDown :size="16" class="sort-icon" />
-          </div>
-        </div>
       </section>
 
       <p class="post-count">
-        총 <strong>{{ filteredPosts.length }}</strong>개의 게시글
+        총 <strong>{{ totalPosts }}</strong>개의 게시글
       </p>
 
-      <section v-if="paginatedPosts.length" class="post-list">
+      <section
+        v-if="isLoading"
+        class="state-panel"
+      >
+        <Loader2
+          :size="34"
+          class="loading-icon"
+        />
+
+        <p>게시글을 불러오고 있습니다.</p>
+      </section>
+
+      <section
+        v-else-if="errorMessage"
+        class="state-panel error-panel"
+      >
+        <AlertCircle :size="36" />
+
+        <h2>게시글을 불러오지 못했습니다.</h2>
+
+        <p>{{ errorMessage }}</p>
+
+        <button
+          type="button"
+          @click="fetchPosts"
+        >
+          다시 시도
+        </button>
+      </section>
+
+      <section
+        v-else-if="posts.length"
+        class="post-list"
+      >
         <article
-          v-for="post in paginatedPosts"
-          :key="post.content_id"
+          v-for="post in posts"
+          :key="post.id"
           class="post-card"
           tabindex="0"
           role="button"
@@ -357,48 +393,64 @@ watch(totalPages, (pageCount) => {
           @keydown.enter="goToDetail(post)"
         >
           <div class="post-card-top">
-            <span
-              :class="['category-tag', `category-${post.category}`]"
-            >
-              # {{ post.category_label }}
+            <span class="anonymous-badge">
+              익명
             </span>
-            <time>{{ formatDate(post.created_at) }}</time>
+
+            <time>
+              {{ formatDate(post.created_at) }}
+            </time>
           </div>
 
           <h2>{{ post.title }}</h2>
-          <p class="post-summary">
-            {{ truncateContent(post.content) }}
+
+          <p class="post-guide">
+            게시글을 선택하면 상세 내용을 확인할 수 있습니다.
           </p>
 
-          <div class="post-card-bottom">
-            <div class="post-stats">
-              <span>
-                <Eye :size="15" />
-                {{ formatNumber(post.views) }}
-              </span>
-              <span>
-                <Heart :size="15" />
-                {{ formatNumber(post.like_count) }}
-              </span>
-              <span>
-                <MessageSquare :size="15" />
-                {{ formatNumber(post.comment_count) }}
-              </span>
-            </div>
+          <footer class="post-card-actions">
+            <button
+              type="button"
+              class="edit-button"
+              @click.stop="goToEdit(post)"
+              @keydown.stop
+            >
+              <Pencil :size="15" />
+              수정
+            </button>
 
-            <span class="post-author">{{ post.author }}</span>
-          </div>
+            <button
+              type="button"
+              class="delete-button"
+              @click.stop="openDeleteModal(post)"
+              @keydown.stop
+            >
+              <Trash2 :size="15" />
+              삭제
+            </button>
+          </footer>
         </article>
       </section>
 
-      <section v-else class="empty-state">
+      <section
+        v-else
+        class="empty-state"
+      >
         <Search :size="36" />
-        <h2>검색 결과가 없습니다.</h2>
-        <p>다른 검색어나 카테고리를 선택해보세요.</p>
+
+        <h2>게시글이 없습니다.</h2>
+
+        <p>
+          검색어를 바꾸거나 새 글을 작성해보세요.
+        </p>
       </section>
 
       <nav
-        v-if="totalPages > 1"
+        v-if="
+          !isLoading &&
+          !errorMessage &&
+          totalPages > 1
+        "
         class="pagination"
         aria-label="게시글 페이지 이동"
       >
@@ -418,7 +470,10 @@ watch(totalPages, (pageCount) => {
           type="button"
           :class="[
             'pagination-number',
-            { active: currentPage === pageNumber },
+            {
+              active:
+                currentPage === pageNumber,
+            },
           ]"
           @click="goToPage(pageNumber)"
         >
@@ -428,13 +483,120 @@ watch(totalPages, (pageCount) => {
         <button
           type="button"
           class="pagination-arrow"
-          :disabled="currentPage === totalPages"
+          :disabled="
+            currentPage === totalPages
+          "
           aria-label="다음 페이지"
           @click="goToPage(currentPage + 1)"
         >
           <ChevronRight :size="18" />
         </button>
       </nav>
+    </div>
+
+    <div
+      v-if="isDeleteModalOpen"
+      class="modal-backdrop"
+      role="presentation"
+      @click.self="closeDeleteModal"
+    >
+      <section
+        class="delete-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-modal-title"
+      >
+        <button
+          type="button"
+          class="modal-close-button"
+          aria-label="삭제 창 닫기"
+          :disabled="isDeleting"
+          @click="closeDeleteModal"
+        >
+          <X :size="18" />
+        </button>
+
+        <div class="modal-icon">
+          <Trash2 :size="21" />
+        </div>
+
+        <h2 id="delete-modal-title">
+          게시글 삭제
+        </h2>
+
+        <p class="modal-description">
+          삭제된 게시글은 복구할 수 없습니다.
+          작성할 때 사용한 비밀번호를 입력해주세요.
+        </p>
+
+        <p class="delete-target-title">
+          {{ deleteTargetPost?.title }}
+        </p>
+
+        <form
+          class="delete-form"
+          @submit.prevent="confirmDelete"
+        >
+          <label for="delete-password">
+            비밀번호
+          </label>
+
+          <div class="delete-password-wrapper">
+            <LockKeyhole :size="18" />
+
+            <input
+              id="delete-password"
+              v-model="deletePassword"
+              type="password"
+              minlength="4"
+              autocomplete="current-password"
+              placeholder="비밀번호 입력"
+              :disabled="isDeleting"
+            />
+          </div>
+
+          <p
+            v-if="deleteErrorMessage"
+            class="delete-error-message"
+          >
+            {{ deleteErrorMessage }}
+          </p>
+
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="modal-cancel-button"
+              :disabled="isDeleting"
+              @click="closeDeleteModal"
+            >
+              취소
+            </button>
+
+            <button
+              type="submit"
+              class="modal-delete-button"
+              :disabled="isDeleting"
+            >
+              <Loader2
+                v-if="isDeleting"
+                :size="17"
+                class="loading-icon"
+              />
+
+              <Trash2
+                v-else
+                :size="17"
+              />
+
+              {{
+                isDeleting
+                  ? "삭제 중..."
+                  : "삭제"
+              }}
+            </button>
+          </div>
+        </form>
+      </section>
     </div>
   </main>
 </template>
@@ -496,7 +658,7 @@ watch(totalPages, (pageCount) => {
   background: #1d4ed8;
 }
 
-.filter-panel {
+.search-panel {
   padding: 16px;
   border: 1px solid #e2e8f0;
   border-radius: 17px;
@@ -515,16 +677,11 @@ watch(totalPages, (pageCount) => {
   border: 1px solid #dbe2ea;
   border-radius: 15px;
   background: #f8fafc;
+  color: #64748b;
   flex: 1;
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.search-icon,
-.filter-icon {
-  flex-shrink: 0;
-  color: #64748b;
 }
 
 .search-input-wrapper input {
@@ -552,71 +709,9 @@ watch(totalPages, (pageCount) => {
   cursor: pointer;
 }
 
-.filter-row {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-}
-
-.category-filter {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.category-button {
-  height: 30px;
-  padding: 0 13px;
-  border: 0;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.category-button:hover {
-  color: #2563eb;
-  background: #eff6ff;
-}
-
-.category-button.active {
-  color: #ffffff;
-  background: #2563eb;
-  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.2);
-}
-
-.sort-wrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.sort-wrapper select {
-  height: 34px;
-  padding: 0 36px 0 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 13px;
-  outline: 0;
-  appearance: none;
-  background: #ffffff;
-  color: #0f172a;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.sort-icon {
-  position: absolute;
-  top: 50%;
-  right: 11px;
-  color: #64748b;
-  pointer-events: none;
-  transform: translateY(-50%);
+.search-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .post-count {
@@ -660,41 +755,13 @@ watch(totalPages, (pageCount) => {
   gap: 15px;
 }
 
-.category-tag {
+.anonymous-badge {
   padding: 4px 10px;
   border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
   font-size: 11px;
   font-weight: 800;
-}
-
-.category-restaurant {
-  color: #f97316;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-}
-
-.category-tour {
-  color: #059669;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-}
-
-.category-festival {
-  color: #9333ea;
-  background: #faf5ff;
-  border: 1px solid #e9d5ff;
-}
-
-.category-life {
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-}
-
-.category-question {
-  color: #475569;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
 }
 
 .post-card time {
@@ -704,51 +771,64 @@ watch(totalPages, (pageCount) => {
 }
 
 .post-card h2 {
-  margin: 10px 0 8px;
+  margin: 13px 0 8px;
   color: #0f172a;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: -0.25px;
 }
 
-.post-summary {
-  overflow: hidden;
+.post-guide {
   margin: 0;
   color: #64748b;
   font-size: 12px;
   line-height: 1.6;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.post-card-bottom {
+.post-card-actions {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
-.post-stats {
-  display: flex;
+.post-card-actions button {
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 10px;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  color: #64748b;
+  justify-content: center;
+  gap: 6px;
   font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
-.post-stats span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.edit-button {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
 }
 
-.post-author {
-  color: #64748b;
-  font-size: 11px;
+.edit-button:hover {
+  background: #dbeafe;
 }
 
+.delete-button {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.delete-button:hover {
+  background: #fee2e2;
+}
+
+.state-panel,
 .empty-state {
   padding: 70px 20px;
   border: 1px solid #e2e8f0;
@@ -758,15 +838,41 @@ watch(totalPages, (pageCount) => {
   text-align: center;
 }
 
-.empty-state h2 {
+.state-panel p,
+.empty-state p {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.empty-state h2,
+.error-panel h2 {
   margin: 15px 0 8px;
   color: #334155;
   font-size: 18px;
 }
 
-.empty-state p {
-  margin: 0;
-  font-size: 13px;
+.error-panel {
+  color: #ef4444;
+}
+
+.error-panel p {
+  color: #64748b;
+}
+
+.error-panel button {
+  margin-top: 18px;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 11px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.loading-icon {
+  animation: spin 0.8s linear infinite;
 }
 
 .pagination {
@@ -805,6 +911,178 @@ watch(totalPages, (pageCount) => {
   opacity: 0.38;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-modal {
+  position: relative;
+  width: 100%;
+  max-width: 410px;
+  padding: 28px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.28);
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.modal-close-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #fef2f2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-modal h2 {
+  margin: 17px 0 7px;
+  color: #0f172a;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.modal-description {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.delete-target-title {
+  overflow: hidden;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-form {
+  margin-top: 20px;
+}
+
+.delete-form > label {
+  margin-bottom: 9px;
+  color: #0f172a;
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.delete-password-wrapper {
+  height: 47px;
+  padding: 0 14px;
+  border: 1px solid #dbe2ea;
+  border-radius: 13px;
+  background: #f8fafc;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.delete-password-wrapper:focus-within {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.delete-password-wrapper input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+}
+
+.delete-error-message {
+  margin: 10px 0 0;
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.modal-actions {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.modal-actions button {
+  height: 46px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.modal-cancel-button {
+  border: 1px solid #dbe2ea;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.modal-delete-button {
+  border: 0;
+  background: #ef4444;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.modal-delete-button:not(:disabled):hover {
+  background: #dc2626;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 640px) {
   .community-container {
     padding: 26px 16px 56px;
@@ -824,15 +1102,6 @@ watch(totalPages, (pageCount) => {
     display: none;
   }
 
-  .filter-row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .sort-wrapper {
-    align-self: flex-end;
-  }
-
   .post-card {
     padding: 16px;
   }
@@ -841,11 +1110,16 @@ watch(totalPages, (pageCount) => {
     font-size: 14px;
   }
 
-  .post-summary {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+  .post-card-actions {
+    justify-content: stretch;
+  }
+
+  .post-card-actions button {
+    flex: 1;
+  }
+
+  .delete-modal {
+    padding: 24px 20px;
   }
 }
 </style>
