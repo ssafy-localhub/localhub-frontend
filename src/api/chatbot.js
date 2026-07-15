@@ -9,7 +9,7 @@ import api from './index';
  */
 export const sendChatMessage = async (message, history = []) => {
   // 백엔드의 ChatRequest 스키마 구조에 맞춰서 전송
-  const response = await api.post('/chat', {
+  const response = await api.post('/chatbot', {
     message,
     history
   });

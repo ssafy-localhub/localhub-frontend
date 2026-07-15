@@ -1,15 +1,12 @@
 <script setup>
 import { nextTick, ref } from "vue";
-import {
-  Sparkles,
-  X,
-  Send,
-  Bot,
-} from "lucide-vue-next";
+import { Sparkles, X, Send } from "lucide-vue-next";
+import { sendChatMessage } from "@/api/chatbot.js"; // API 함수 임포트 (.js 추가)
 
 const isOpen = ref(false);
 const messageInput = ref("");
 const messageList = ref(null);
+const isPending = ref(false); // API 요청 중 대기 상태 추가
 
 const messages = ref([
   {
@@ -44,8 +41,9 @@ const closeChat = () => {
 const sendMessage = async (presetMessage = "") => {
   const text = (presetMessage || messageInput.value).trim();
 
-  if (!text) return;
+  if (!text || isPending.value) return;
 
+  // 1. 사용자 메시지 즉시 화면 추가
   messages.value.push({
     id: Date.now(),
     role: "user",
@@ -56,16 +54,37 @@ const sendMessage = async (presetMessage = "") => {
   messageInput.value = "";
   await scrollToBottom();
 
-  window.setTimeout(async () => {
+  // 2. 백엔드 스키마에 맞게 대화 기록(history) 정제
+  const formattedHistory = messages.value.map(msg => ({
+    role: msg.role,
+    content: msg.content
+  }));
+
+  try {
+    isPending.value = true;
+
+    // 3. FastAPI 백엔드 API 호출
+    const data = await sendChatMessage(text, formattedHistory);
+
+    // 4. 받아온 실제 AI 응답을 화면에 추가
     messages.value.push({
       id: Date.now() + 1,
       role: "assistant",
-      content: createDummyAnswer(text),
+      content: data.response,
       time: getCurrentTime(),
     });
-
+  } catch (error) {
+    console.error("AI 응답 실패:", error);
+    messages.value.push({
+      id: Date.now() + 1,
+      role: "assistant",
+      content: "죄송합니다. 서버와 연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요. 😢",
+      time: getCurrentTime(),
+    });
+  } finally {
+    isPending.value = false;
     await scrollToBottom();
-  }, 500);
+  }
 };
 
 const getCurrentTime = () => {
@@ -74,30 +93,6 @@ const getCurrentTime = () => {
     minute: "2-digit",
     hour12: false,
   }).format(new Date());
-};
-
-const createDummyAnswer = (question) => {
-  if (question.includes("맛집")) {
-    return "구미에서는 인동, 원평동, 금오산 주변에 식당이 많이 모여 있어요. 원하는 메뉴나 지역을 알려주시면 더 구체적으로 추천해드릴게요.";
-  }
-
-  if (question.includes("금오산")) {
-    return "금오산은 도립공원, 케이블카, 대혜폭포 등 볼거리가 많아요. 등산 난이도와 주차 여부도 함께 확인해드릴 수 있어요.";
-  }
-
-  if (question.includes("축제")) {
-    return "현재 더미 데이터 기준으로 구미 지역 축제와 행사 일정을 안내하고 있어요. FastAPI 연동 후 실제 일정 데이터를 제공하게 됩니다.";
-  }
-
-  if (question.includes("관광지")) {
-    return "금오산도립공원, 구미낙동강체육공원, 구미에코랜드 등이 대표적인 관광지예요.";
-  }
-
-  if (question.includes("주차")) {
-    return "주차 가능 여부는 장소별 상세 페이지에서 확인할 수 있어요. 특정 장소 이름을 알려주시면 확인해드릴게요.";
-  }
-
-  return "현재는 더미 응답으로 동작하고 있어요. 추후 FastAPI의 POST /api/chat과 연결하면 실제 AI 답변을 받을 수 있습니다.";
 };
 
 const scrollToBottom = async () => {
@@ -167,6 +162,16 @@ const scrollToBottom = async () => {
                 <time>{{ message.time }}</time>
               </div>
             </article>
+            
+            <!-- 로딩 상태 표시 (AI가 고민 중일 때) -->
+            <article v-if="isPending" class="message-row message-assistant">
+              <span class="message-avatar">
+                <Sparkles :size="15" />
+              </span>
+              <div class="message-bubble">
+                <p>답변을 생각하고 있어요...</p>
+              </div>
+            </article>
           </div>
 
           <section class="quick-question-section">
@@ -199,7 +204,7 @@ const scrollToBottom = async () => {
 
           <button
             type="submit"
-            :disabled="!messageInput.trim()"
+            :disabled="!messageInput.trim() || isPending"
             aria-label="메시지 전송"
           >
             <Send :size="18" />
