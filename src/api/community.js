@@ -12,7 +12,7 @@ export const getPostDetail = async (post_id) => {
 };
 
 export const getPostComment = async (post_id) => {
-  const response = await api.get(`/posts/${post_id}/comments`);
+  const response = await api.get(`/posts/${post_id}/comments/`);
   return response.data;
 };
 
@@ -23,6 +23,6 @@ export const getPostComment = async (post_id) => {
  * @returns {Promise<any>} 등록된 댓글 데이터
  */
 export const createComment = async (post_id, commentData) => {
-  const response = await api.post(`/posts/${post_id}/comments`, commentData);
+  const response = await api.post(`/posts/${post_id}/comments/`, commentData);
   return response.data;
 };

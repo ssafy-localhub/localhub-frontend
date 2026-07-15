@@ -132,12 +132,13 @@ const togglePostLike = () => {
 
 const submitComment = async() => {
   const trimmedText = commentText.value.trim();
+  const trimmedAuthor = commentAuthor.value.trim();
   if (!trimmedText || !post.value) return;
   
   try {
     const newComment = await createComment(postId.value, {
       comment_content: trimmedText,
-      comment_author: commentAuthor.value.trim()
+      comment_author: trimmedAuthor
     });
 
     comments.value.unshift(newComment);
