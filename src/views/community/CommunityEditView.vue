@@ -1,16 +1,24 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   ArrowLeft,
   LockKeyhole,
   PenLine,
-  ImagePlus,
-  X,
+  Loader2,
+  AlertCircle,
+  Tag,
 } from "lucide-vue-next";
+
+import {
+  getPostDetail,
+  updatePost,
+} from "@/api/community";
 
 const route = useRoute();
 const router = useRouter();
+
+const postId = computed(() => Number(route.params.id));
 
 const categories = [
   { key: "restaurant", label: "맛집" },
@@ -20,96 +28,20 @@ const categories = [
   { key: "question", label: "질문" },
 ];
 
-/*
-  추후 FastAPI 연동 시 아래 initialPost 부분만
-  GET /api/posts/:id 응답으로 교체하면 됩니다.
-*/
-const initialPost = {
-  content_id: Number(route.params.id || 1),
-  category:
-    typeof route.query.category === "string"
-      ? route.query.category
-      : "restaurant",
-  title: "구미 인동 신규 라멘집 발견 🍜 강추합니다",
-  content: `인동 CGV 근처에 최근 오픈한 '멘야 하루카제'라는 라멘집을 다녀왔어요.
-
-육수가 진하고 깔끔한데 느끼하지 않고, 면발도 탱탱해서 정말 맛있더라고요. 차슈가 두툼하게 올라가 있고 반숙 계란도 잘 절여져 있어요.
-
-웨이팅이 평일 점심엔 30분, 주말엔 1시간 넘게 걸리는데 충분히 기다릴 가치가 있습니다. 가격은 기본 쇼유라멘 9,500원, 특제 라멘 12,000원이에요.
-
-주차는 바로 옆 CGV 주차장 이용하시면 됩니다. 꼭 한 번 가보세요!`,
-  images: [
-    {
-      image_id: 1,
-      image_url:
-        "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80",
-      image_name: "ramen-main.jpg",
-    },
-    {
-      image_id: 2,
-      image_url:
-        "https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=800&q=80",
-      image_name: "ramen-side.jpg",
-    },
-  ],
-};
-
-const selectedCategory = ref(initialPost.category);
-const title = ref(initialPost.title);
-const content = ref(initialPost.content);
+const selectedCategory = ref("life");
+const title = ref("");
+const content = ref("");
+const tag = ref("");
 const password = ref("");
-const validationMessage = ref("");
-const fileInput = ref(null);
 
-const selectedImages = ref(
-  initialPost.images.map((image) => ({
-    id: `existing-${image.image_id}`,
-    image_id: image.image_id,
-    name: image.image_name,
-    previewUrl: image.image_url,
-    isExisting: true,
-    file: null,
-  })),
-);
+const isLoading = ref(false);
+const isSubmitting = ref(false);
+const loadErrorMessage = ref("");
+const validationMessage = ref("");
 
 const titleLength = computed(() => title.value.length);
 const contentLength = computed(() => content.value.length);
-
-const openFilePicker = () => {
-  fileInput.value?.click();
-};
-
-const handleFileChange = (event) => {
-  const files = Array.from(event.target.files ?? []);
-  const remainingCount = Math.max(0, 5 - selectedImages.value.length);
-
-  files.slice(0, remainingCount).forEach((file) => {
-    if (!file.type.startsWith("image/")) return;
-
-    selectedImages.value.push({
-      id: `new-${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
-      image_id: null,
-      name: file.name,
-      previewUrl: URL.createObjectURL(file),
-      isExisting: false,
-      file,
-    });
-  });
-
-  event.target.value = "";
-};
-
-const removeImage = (imageId) => {
-  const target = selectedImages.value.find((image) => image.id === imageId);
-
-  if (target && !target.isExisting) {
-    URL.revokeObjectURL(target.previewUrl);
-  }
-
-  selectedImages.value = selectedImages.value.filter(
-    (image) => image.id !== imageId,
-  );
-};
+const tagLength = computed(() => tag.value.length);
 
 const validateForm = () => {
   if (!selectedCategory.value) {
@@ -137,73 +69,208 @@ const validateForm = () => {
   return true;
 };
 
-const submitEdit = () => {
-  if (!validateForm()) return;
+const getApiErrorMessage = (error, fallbackMessage) => {
+  const status = error.response?.status;
+  const detail = error.response?.data?.detail;
 
-  const keptImageIds = selectedImages.value
-    .filter((image) => image.isExisting)
-    .map((image) => image.image_id);
+  if (!error.response) {
+    return "백엔드 서버에 연결할 수 없습니다. FastAPI 실행 상태를 확인해주세요.";
+  }
 
-  const newImageFiles = selectedImages.value
-    .filter((image) => !image.isExisting)
-    .map((image) => image.file);
+  if (status === 403) {
+    return "비밀번호가 일치하지 않습니다.";
+  }
 
-  const dummyPayload = {
-    content_id: initialPost.content_id,
-    category: selectedCategory.value,
-    title: title.value.trim(),
-    content: content.value.trim(),
-    password: password.value,
-    kept_image_ids: keptImageIds,
-    new_image_files: newImageFiles,
-  };
+  if (status === 404) {
+    return "게시글을 찾을 수 없습니다.";
+  }
 
-  console.log("수정 요청 예정 데이터:", dummyPayload);
+  if (status === 422) {
+    if (Array.isArray(detail)) {
+      const firstError = detail[0];
+      const field = firstError?.loc?.at(-1);
+      const message = firstError?.msg;
 
-  window.alert("더미 데이터 기준으로 게시글이 수정되었습니다.");
+      return field && message
+        ? `입력값 오류: ${field} - ${message}`
+        : "백엔드가 입력 데이터를 처리하지 못했습니다.";
+    }
 
-  router.push({
-    name: "community-detail",
-    params: {
+    return "백엔드가 입력 데이터를 처리하지 못했습니다.";
+  }
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  return fallbackMessage;
+};
+
+const fetchPost = async () => {
+  if (!postId.value) {
+    loadErrorMessage.value = "유효한 게시글 ID가 없습니다.";
+    return;
+  }
+
+  isLoading.value = true;
+  loadErrorMessage.value = "";
+
+  try {
+    const data = await getPostDetail(postId.value);
+
+    title.value = data?.title ?? "";
+    content.value = data?.content ?? "";
+    tag.value = data?.tag ?? "";
+
+    const responseCategory = data?.category;
+
+    if (
+      typeof responseCategory === "string" &&
+      categories.some(
+        (category) => category.key === responseCategory,
+      )
+    ) {
+      selectedCategory.value = responseCategory;
+    } else if (
+      typeof route.query.category === "string" &&
+      categories.some(
+        (category) =>
+          category.key === route.query.category,
+      )
+    ) {
+      selectedCategory.value = route.query.category;
+    } else {
+      selectedCategory.value = "life";
+    }
+
+    password.value = "";
+  } catch (error) {
+    console.error("게시글 상세 조회 실패:", error);
+
+    loadErrorMessage.value = getApiErrorMessage(
+      error,
+      "게시글 정보를 불러오지 못했습니다.",
+    );
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const submitEdit = async () => {
+  if (
+    !validateForm() ||
+    isSubmitting.value ||
+    !postId.value
+  ) {
+    return;
+  }
+
+  isSubmitting.value = true;
+  validationMessage.value = "";
+
+  try {
+    const result = await updatePost(postId.value, {
+      title: title.value.trim(),
+      content: content.value.trim(),
       category: selectedCategory.value,
-      id: initialPost.content_id,
-    },
-  });
+      tag: tag.value.trim() || null,
+      password: password.value,
+    });
+
+    window.alert(
+      result?.message || "게시글이 수정되었습니다.",
+    );
+
+    await router.push({
+      name: "community",
+    });
+  } catch (error) {
+    console.error("게시글 수정 실패:", error);
+
+    validationMessage.value = getApiErrorMessage(
+      error,
+      "게시글 수정에 실패했습니다.",
+    );
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const cancel = () => {
   router.push({
-    name: "community-detail",
-    params: {
-      category: initialPost.category,
-      id: initialPost.content_id,
-    },
+    name: "community",
   });
 };
 
-onBeforeUnmount(() => {
-  selectedImages.value.forEach((image) => {
-    if (!image.isExisting) {
-      URL.revokeObjectURL(image.previewUrl);
-    }
-  });
-});
+onMounted(fetchPost);
 </script>
 
 <template>
   <main class="edit-page">
     <div class="edit-container">
-      <button type="button" class="back-link" @click="cancel">
+      <button
+        type="button"
+        class="back-link"
+        @click="cancel"
+      >
         <ArrowLeft :size="17" />
-        게시글로 돌아가기
+        커뮤니티로 돌아가기
       </button>
 
       <header class="page-header">
         <h1>게시글 수정</h1>
-        <p>기존 작성 내용을 확인하고 필요한 부분만 수정해주세요.</p>
+        <p>
+          기존 작성 내용을 확인하고 필요한 부분만
+          수정해주세요.
+        </p>
       </header>
 
-      <form class="edit-card" @submit.prevent="submitEdit">
+      <section
+        v-if="isLoading"
+        class="state-card"
+      >
+        <Loader2
+          :size="35"
+          class="loading-icon"
+        />
+
+        <p>게시글 정보를 불러오고 있습니다.</p>
+      </section>
+
+      <section
+        v-else-if="loadErrorMessage"
+        class="state-card error-card"
+      >
+        <AlertCircle :size="38" />
+
+        <h2>게시글을 불러오지 못했습니다.</h2>
+
+        <p>{{ loadErrorMessage }}</p>
+
+        <div class="state-actions">
+          <button
+            type="button"
+            class="retry-button"
+            @click="fetchPost"
+          >
+            다시 시도
+          </button>
+
+          <button
+            type="button"
+            class="list-button"
+            @click="cancel"
+          >
+            목록으로
+          </button>
+        </div>
+      </section>
+
+      <form
+        v-else
+        class="edit-card"
+        @submit.prevent="submitEdit"
+      >
         <section class="form-section">
           <label class="field-label">
             카테고리
@@ -217,8 +284,12 @@ onBeforeUnmount(() => {
               type="button"
               :class="[
                 'category-button',
-                { active: selectedCategory === category.key },
+                {
+                  active:
+                    selectedCategory === category.key,
+                },
               ]"
+              :disabled="isSubmitting"
               @click="selectedCategory = category.key"
             >
               {{ category.label }}
@@ -226,10 +297,44 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
+        <section class="form-section">
+          <label
+            for="edit-tag"
+            class="field-label"
+          >
+            태그
+          </label>
+
+          <div class="tag-input-wrapper">
+            <Tag :size="18" />
+
+            <input
+              id="edit-tag"
+              v-model="tag"
+              type="text"
+              maxlength="100"
+              :disabled="isSubmitting"
+              placeholder="예: 구미 인동 라멘 주차"
+            />
+          </div>
+
+          <div class="field-help-row">
+            <p>
+              검색에 사용할 키워드를 띄어쓰기로 구분해
+              입력하세요.
+            </p>
+
+            <span>{{ tagLength }}/100</span>
+          </div>
+        </section>
+
         <div class="divider"></div>
 
         <section class="form-section">
-          <label for="edit-title" class="field-label">
+          <label
+            for="edit-title"
+            class="field-label"
+          >
             제목
             <span>*</span>
           </label>
@@ -239,14 +344,20 @@ onBeforeUnmount(() => {
             v-model="title"
             type="text"
             maxlength="100"
+            :disabled="isSubmitting"
             placeholder="제목을 입력해주세요 (5~100자)"
           />
 
-          <p class="character-count">{{ titleLength }}/100</p>
+          <p class="character-count">
+            {{ titleLength }}/100
+          </p>
         </section>
 
         <section class="form-section">
-          <label for="edit-content" class="field-label">
+          <label
+            for="edit-content"
+            class="field-label"
+          >
             내용
             <span>*</span>
           </label>
@@ -255,73 +366,37 @@ onBeforeUnmount(() => {
             id="edit-content"
             v-model="content"
             maxlength="5000"
+            :disabled="isSubmitting"
             placeholder="내용을 입력해주세요. (10자 이상)"
           ></textarea>
 
-          <p class="character-count">{{ contentLength }}자</p>
+          <p class="character-count">
+            {{ contentLength }}/5000
+          </p>
         </section>
 
-        <section class="form-section">
-          <div class="image-title-row">
-            <label class="field-label">이미지 첨부</label>
-            <span>{{ selectedImages.length }}/5</span>
-          </div>
+        <section class="api-notice">
+          <AlertCircle :size="17" />
 
-          <input
-            ref="fileInput"
-            class="hidden-file-input"
-            type="file"
-            accept="image/*"
-            multiple
-            @change="handleFileChange"
-          />
+          <div>
+            <strong>
+              이미지 수정은 현재 제외되어 있습니다.
+            </strong>
 
-          <button
-            type="button"
-            class="image-upload-button"
-            :disabled="selectedImages.length >= 5"
-            @click="openFilePicker"
-          >
-            <ImagePlus :size="22" />
-
-            <span>
-              <strong>이미지 추가</strong>
-              <small>기존 이미지를 삭제하거나 새 이미지를 추가할 수 있습니다.</small>
-            </span>
-          </button>
-
-          <div v-if="selectedImages.length" class="image-preview-grid">
-            <article
-              v-for="image in selectedImages"
-              :key="image.id"
-              class="image-preview-card"
-            >
-              <img :src="image.previewUrl" :alt="image.name" />
-
-              <span v-if="image.isExisting" class="existing-badge">
-                기존 이미지
-              </span>
-
-              <button
-                type="button"
-                class="remove-image-button"
-                aria-label="첨부 이미지 삭제"
-                @click="removeImage(image.id)"
-              >
-                <X :size="15" />
-              </button>
-
-              <div class="image-info">
-                <strong>{{ image.name }}</strong>
-              </div>
-            </article>
+            <p>
+              이번 수정 요청에는 제목, 내용, 카테고리,
+              태그, 비밀번호를 전송합니다.
+            </p>
           </div>
         </section>
 
         <div class="divider"></div>
 
         <section class="form-section">
-          <label for="edit-password" class="field-label">
+          <label
+            for="edit-password"
+            class="field-label"
+          >
             비밀번호 확인
             <span>*</span>
           </label>
@@ -334,28 +409,58 @@ onBeforeUnmount(() => {
               v-model="password"
               type="password"
               minlength="4"
+              maxlength="100"
+              autocomplete="current-password"
+              :disabled="isSubmitting"
               placeholder="작성 시 사용한 비밀번호를 입력해주세요."
             />
           </div>
 
           <p class="password-help">
             <LockKeyhole :size="13" />
-            기존 비밀번호는 화면에 표시하지 않으며, 수정 요청 시 일치 여부만 확인합니다.
+            기존 비밀번호는 화면에 표시하지 않으며,
+            수정 요청 시 일치 여부만 확인합니다.
           </p>
         </section>
 
-        <p v-if="validationMessage" class="validation-message">
+        <p
+          v-if="validationMessage"
+          class="validation-message"
+        >
           {{ validationMessage }}
         </p>
 
         <footer class="form-actions">
-          <button type="button" class="cancel-button" @click="cancel">
+          <button
+            type="button"
+            class="cancel-button"
+            :disabled="isSubmitting"
+            @click="cancel"
+          >
             취소
           </button>
 
-          <button type="submit" class="submit-button">
-            <PenLine :size="17" />
-            수정 완료
+          <button
+            type="submit"
+            class="submit-button"
+            :disabled="isSubmitting"
+          >
+            <Loader2
+              v-if="isSubmitting"
+              :size="17"
+              class="loading-icon"
+            />
+
+            <PenLine
+              v-else
+              :size="17"
+            />
+
+            {{
+              isSubmitting
+                ? "수정 중..."
+                : "수정 완료"
+            }}
           </button>
         </footer>
       </form>
@@ -412,12 +517,66 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
-.edit-card {
+.edit-card,
+.state-card {
   overflow: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.07);
+}
+
+.state-card {
+  padding: 72px 24px;
+  color: #64748b;
+  text-align: center;
+}
+
+.state-card p {
+  margin: 13px 0 0;
+  font-size: 13px;
+}
+
+.error-card {
+  color: #ef4444;
+}
+
+.error-card h2 {
+  margin: 15px 0 7px;
+  color: #334155;
+  font-size: 19px;
+}
+
+.error-card p {
+  color: #64748b;
+}
+
+.state-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+}
+
+.state-actions button {
+  height: 39px;
+  padding: 0 15px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.retry-button {
+  border: 0;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.list-button {
+  border: 1px solid #dbe2ea;
+  background: #ffffff;
+  color: #334155;
 }
 
 .form-section {
@@ -460,6 +619,11 @@ onBeforeUnmount(() => {
   color: #ffffff;
 }
 
+.category-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .divider {
   height: 1px;
   margin: 21px 24px 0;
@@ -491,134 +655,21 @@ onBeforeUnmount(() => {
 
 .form-section > input:focus,
 .form-section textarea:focus,
+.tag-input-wrapper:focus-within,
 .password-input-wrapper:focus-within {
   border-color: #60a5fa;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
-.character-count {
-  margin: 7px 0 0;
-  color: #64748b;
-  font-size: 11px;
-  text-align: right;
-}
-
-.image-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.image-title-row > span {
-  color: #64748b;
-  font-size: 11px;
-}
-
-.hidden-file-input {
-  display: none;
-}
-
-.image-upload-button {
-  width: 100%;
-  min-height: 82px;
-  padding: 16px;
-  border: 1px dashed #93c5fd;
-  border-radius: 15px;
-  background: #eff6ff;
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 11px;
-  cursor: pointer;
-}
-
-.image-upload-button:disabled {
+.form-section > input:disabled,
+.form-section textarea:disabled,
+.tag-input-wrapper input:disabled,
+.password-input-wrapper input:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.65;
 }
 
-.image-upload-button span {
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.image-upload-button strong {
-  font-size: 13px;
-}
-
-.image-upload-button small {
-  color: #64748b;
-  font-size: 10px;
-}
-
-.image-preview-grid {
-  margin-top: 13px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 11px;
-}
-
-.image-preview-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 13px;
-  background: #ffffff;
-}
-
-.image-preview-card img {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  display: block;
-}
-
-.existing-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.9);
-  color: #ffffff;
-  font-size: 9px;
-  font-weight: 800;
-}
-
-.remove-image-button {
-  position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 27px;
-  height: 27px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(15, 23, 42, 0.72);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.image-info {
-  min-width: 0;
-  padding: 9px;
-}
-
-.image-info strong {
-  overflow: hidden;
-  color: #0f172a;
-  display: block;
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+.tag-input-wrapper,
 .password-input-wrapper {
   height: 47px;
   padding: 0 14px;
@@ -631,13 +682,64 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.tag-input-wrapper input,
 .password-input-wrapper input {
   min-width: 0;
   flex: 1;
   border: 0;
   outline: 0;
   background: transparent;
+  color: #0f172a;
   font: inherit;
+}
+
+.field-help-row {
+  margin-top: 7px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  font-size: 10px;
+}
+
+.field-help-row p {
+  margin: 0;
+}
+
+.field-help-row span {
+  flex-shrink: 0;
+}
+
+.character-count {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 11px;
+  text-align: right;
+}
+
+.api-notice {
+  margin: 24px 24px 0;
+  padding: 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.api-notice strong {
+  color: #1e3a8a;
+  font-size: 12px;
+}
+
+.api-notice p {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 10px;
+  line-height: 1.6;
 }
 
 .password-help {
@@ -656,6 +758,7 @@ onBeforeUnmount(() => {
   background: #fef2f2;
   color: #dc2626;
   font-size: 12px;
+  line-height: 1.6;
 }
 
 .form-actions {
@@ -676,6 +779,11 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+.form-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .cancel-button {
   border: 1px solid #dbe2ea;
   background: #ffffff;
@@ -692,8 +800,18 @@ onBeforeUnmount(() => {
   gap: 7px;
 }
 
-.submit-button:hover {
+.submit-button:not(:disabled):hover {
   background: #1d4ed8;
+}
+
+.loading-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 640px) {
@@ -710,7 +828,8 @@ onBeforeUnmount(() => {
     padding-right: 18px;
   }
 
-  .divider {
+  .divider,
+  .api-notice {
     margin-left: 18px;
     margin-right: 18px;
   }
@@ -719,13 +838,11 @@ onBeforeUnmount(() => {
     padding: 0 15px;
   }
 
-  .image-preview-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .form-actions {
     padding-left: 18px;
     padding-right: 18px;
   }
 }
 </style>
+
+

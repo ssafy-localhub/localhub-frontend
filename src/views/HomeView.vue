@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   MapPin,
@@ -10,14 +10,20 @@ import {
   MessageSquare,
   TrendingUp,
   Zap,
-  Eye,
-  Heart,
   ChevronRight,
   Send,
+  Loader2,
+  AlertCircle,
 } from "lucide-vue-next";
 
+import { getPosts } from "@/api/community";
+
 const router = useRouter();
+
 const searchKeyword = ref("");
+const recentPosts = ref([]);
+const isLoadingRecentPosts = ref(false);
+const recentPostsError = ref("");
 
 const categories = [
   {
@@ -25,7 +31,8 @@ const categories = [
     title: "관광명소",
     englishTitle: "TOURIST SPOTS",
     count: 42,
-    description: "금오산, 낙동강 등 구미의 숨겨진 보석 같은 명소들을 발견하세요.",
+    description:
+      "금오산, 낙동강 등 구미의 숨겨진 보석 같은 명소들을 발견하세요.",
     icon: Landmark,
     color: "#00b894",
     image:
@@ -36,7 +43,8 @@ const categories = [
     title: "맛집",
     englishTitle: "RESTAURANTS",
     count: 128,
-    description: "현지인이 인정한 맛집부터 숨은 로컬 명소까지 다양한 식당 정보",
+    description:
+      "현지인이 인정한 맛집부터 숨은 로컬 명소까지 다양한 식당 정보",
     icon: UtensilsCrossed,
     color: "#ff5722",
     image:
@@ -47,55 +55,12 @@ const categories = [
     title: "축제 & 행사",
     englishTitle: "FESTIVALS",
     count: 23,
-    description: "벚꽃 축제, 선산 5일장 등 구미에서 열리는 다양한 행사 일정",
+    description:
+      "벚꽃 축제, 선산 5일장 등 구미에서 열리는 다양한 행사 일정",
     icon: CalendarDays,
     color: "#9333ea",
     image:
       "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80",
-  },
-];
-
-const recentPosts = [
-  {
-    id: 1,
-    category: "restaurant",
-    categoryLabel: "맛집",
-    title: "구미 인동 신규 라멘집 발견 🍜 강추합니다",
-    views: "847",
-    likes: 124,
-    comments: 34,
-    date: "2026.07.13",
-  },
-  {
-    id: 2,
-    category: "tour",
-    categoryLabel: "관광",
-    notice: true,
-    title: "금오산 등산 코스 완전 정복 가이드 (초보~중급)",
-    views: "1.2K",
-    likes: 287,
-    comments: 62,
-    date: "2026.07.12",
-  },
-  {
-    id: 3,
-    category: "festival",
-    categoryLabel: "축제",
-    title: "낙동강 벚꽃 축제 일정 공유해요 🌸",
-    views: "2.2K",
-    likes: 445,
-    comments: 98,
-    date: "2026.07.11",
-  },
-  {
-    id: 4,
-    category: "restaurant",
-    categoryLabel: "맛집",
-    title: "구미역 근처 공부하기 좋은 카페 모음",
-    views: "934",
-    likes: 167,
-    comments: 45,
-    date: "2026.07.10",
   },
 ];
 
@@ -122,6 +87,49 @@ const statistics = [
   },
 ];
 
+const formatDate = (dateTime) => {
+  if (!dateTime) {
+    return "";
+  }
+
+  return String(dateTime)
+    .slice(0, 10)
+    .replaceAll("-", ".");
+};
+
+const fetchRecentPosts = async () => {
+  isLoadingRecentPosts.value = true;
+  recentPostsError.value = "";
+
+  try {
+    const data = await getPosts({
+      page: 1,
+      size: 4,
+      filter: "최신",
+      search: "",
+    });
+
+    recentPosts.value = Array.isArray(data?.posts)
+      ? data.posts
+      : [];
+  } catch (error) {
+    console.error("홈 최근 게시글 조회 실패:", error);
+
+    recentPosts.value = [];
+
+    if (!error.response) {
+      recentPostsError.value =
+        "백엔드 서버에 연결할 수 없습니다.";
+    } else {
+      recentPostsError.value =
+        error.response?.data?.detail ||
+        "최근 게시글을 불러오지 못했습니다.";
+    }
+  } finally {
+    isLoadingRecentPosts.value = false;
+  }
+};
+
 const goToSearch = () => {
   const keyword = searchKeyword.value.trim();
 
@@ -136,13 +144,24 @@ const goToCategory = (category) => {
 };
 
 const goToPost = (post) => {
-  router.push(`/community/${post.category}/${post.id}`);
+  /*
+   * 현재 목록 API는 category를 반환하지 않으므로
+   * 상세 라우트의 category 파라미터에는 임시값 all을 사용합니다.
+   */
+  router.push({
+    name: "community-detail",
+    params: {
+      category: "all",
+      id: post.id,
+    },
+  });
 };
+
+onMounted(fetchRecentPosts);
 </script>
 
 <template>
   <div class="home-page">
-    <!-- Hero -->
     <section class="hero">
       <div class="hero-grid"></div>
       <div class="hero-glow"></div>
@@ -163,8 +182,14 @@ const goToPost = (post) => {
           구미를 더 풍성하게 즐기는 방법을 알려드릴게요.
         </p>
 
-        <form class="search-box" @submit.prevent="goToSearch">
-          <Search class="search-icon" :size="22" />
+        <form
+          class="search-box"
+          @submit.prevent="goToSearch"
+        >
+          <Search
+            class="search-icon"
+            :size="22"
+          />
 
           <input
             v-model="searchKeyword"
@@ -177,24 +202,44 @@ const goToPost = (post) => {
         </form>
 
         <div class="keyword-list">
-          <button type="button" @click="searchKeyword = '금오산'">#금오산</button>
-          <button type="button" @click="searchKeyword = '낙동강벚꽃'">
+          <button
+            type="button"
+            @click="searchKeyword = '금오산'"
+          >
+            #금오산
+          </button>
+
+          <button
+            type="button"
+            @click="searchKeyword = '낙동강벚꽃'"
+          >
             #낙동강벚꽃
           </button>
-          <button type="button" @click="searchKeyword = '인동맛집'">
+
+          <button
+            type="button"
+            @click="searchKeyword = '인동맛집'"
+          >
             #인동맛집
           </button>
-          <button type="button" @click="searchKeyword = '선산5일장'">
+
+          <button
+            type="button"
+            @click="searchKeyword = '선산5일장'"
+          >
             #선산5일장
           </button>
-          <button type="button" @click="searchKeyword = '구미야경'">
+
+          <button
+            type="button"
+            @click="searchKeyword = '구미야경'"
+          >
             #구미야경
           </button>
         </div>
       </div>
     </section>
 
-    <!-- 통계 -->
     <section class="statistics">
       <div class="statistics-inner">
         <article
@@ -217,17 +262,21 @@ const goToPost = (post) => {
       </div>
     </section>
 
-    <!-- 메인 콘텐츠 -->
     <main class="home-content">
-      <!-- 카테고리 -->
       <section class="content-section">
         <div class="section-heading">
           <div>
-            <span class="section-eyebrow blue">EXPLORE</span>
+            <span class="section-eyebrow blue">
+              EXPLORE
+            </span>
+
             <h2>카테고리 탐색</h2>
           </div>
 
-          <RouterLink to="/community" class="section-more">
+          <RouterLink
+            to="/community"
+            class="section-more"
+          >
             전체보기
             <ChevronRight :size="17" />
           </RouterLink>
@@ -245,18 +294,27 @@ const goToPost = (post) => {
           >
             <div
               class="category-image"
-              :style="{ backgroundImage: `url(${category.image})` }"
+              :style="{
+                backgroundImage: `url(${category.image})`,
+              }"
             >
               <div class="category-overlay"></div>
 
               <span
                 class="category-icon"
-                :style="{ backgroundColor: category.color }"
+                :style="{
+                  backgroundColor: category.color,
+                }"
               >
-                <component :is="category.icon" :size="27" />
+                <component
+                  :is="category.icon"
+                  :size="27"
+                />
               </span>
 
-              <span class="category-count">{{ category.count }}곳</span>
+              <span class="category-count">
+                {{ category.count }}곳
+              </span>
 
               <div class="category-title">
                 <span>{{ category.englishTitle }}</span>
@@ -267,7 +325,10 @@ const goToPost = (post) => {
             <div class="category-content">
               <p>{{ category.description }}</p>
 
-              <span class="category-detail" :style="{ color: category.color }">
+              <span
+                class="category-detail"
+                :style="{ color: category.color }"
+              >
                 자세히 보기
                 <ChevronRight :size="16" />
               </span>
@@ -276,21 +337,58 @@ const goToPost = (post) => {
         </div>
       </section>
 
-      <!-- 최근 커뮤니티 글 -->
-      <section class="content-section community-section">
+      <section
+        class="content-section community-section"
+      >
         <div class="section-heading">
           <div>
-            <span class="section-eyebrow orange">COMMUNITY</span>
+            <span class="section-eyebrow orange">
+              COMMUNITY
+            </span>
+
             <h2>최근 커뮤니티 글</h2>
           </div>
 
-          <RouterLink to="/community" class="section-more">
+          <RouterLink
+            to="/community"
+            class="section-more"
+          >
             전체보기
             <ChevronRight :size="17" />
           </RouterLink>
         </div>
 
-        <div class="post-grid">
+        <section
+          v-if="isLoadingRecentPosts"
+          class="recent-state"
+        >
+          <Loader2
+            :size="30"
+            class="loading-icon"
+          />
+          <p>최근 게시글을 불러오고 있습니다.</p>
+        </section>
+
+        <section
+          v-else-if="recentPostsError"
+          class="recent-state recent-error"
+        >
+          <AlertCircle :size="31" />
+
+          <p>{{ recentPostsError }}</p>
+
+          <button
+            type="button"
+            @click="fetchRecentPosts"
+          >
+            다시 시도
+          </button>
+        </section>
+
+        <div
+          v-else-if="recentPosts.length"
+          class="post-grid"
+        >
           <article
             v-for="post in recentPosts"
             :key="post.id"
@@ -301,42 +399,34 @@ const goToPost = (post) => {
             @keydown.enter="goToPost(post)"
           >
             <div class="post-main">
-              <div class="post-tags">
-                <span :class="['post-tag', `tag-${post.category}`]">
-                  # {{ post.categoryLabel }}
-                </span>
-
-                <span v-if="post.notice" class="post-notice">
-                  📌 공지
-                </span>
-              </div>
+              <span class="anonymous-label">
+                익명 게시글
+              </span>
 
               <h3>{{ post.title }}</h3>
 
-              <div class="post-meta">
-                <span>
-                  <Eye :size="13" />
-                  {{ post.views }}
-                </span>
-
-                <span>
-                  <Heart :size="13" />
-                  {{ post.likes }}
-                </span>
-
-                <span>
-                  <MessageSquare :size="13" />
-                  {{ post.comments }}
-                </span>
-              </div>
+              <p class="post-description">
+                게시글을 선택하면 상세 내용을 확인할 수 있습니다.
+              </p>
             </div>
 
             <div class="post-side">
               <ChevronRight :size="20" />
-              <time>{{ post.date }}</time>
+
+              <time>
+                {{ formatDate(post.created_at) }}
+              </time>
             </div>
           </article>
         </div>
+
+        <section
+          v-else
+          class="recent-state"
+        >
+          <MessageSquare :size="31" />
+          <p>등록된 게시글이 없습니다.</p>
+        </section>
       </section>
     </main>
   </div>
@@ -348,14 +438,18 @@ const goToPost = (post) => {
   background: #f6f8fb;
 }
 
-/* Hero */
 .hero {
   position: relative;
   min-height: 530px;
   overflow: hidden;
   color: #ffffff;
   background:
-    linear-gradient(130deg, #1769f2 0%, #2864e8 52%, #343dcc 100%);
+    linear-gradient(
+      130deg,
+      #1769f2 0%,
+      #2864e8 52%,
+      #343dcc 100%
+    );
 }
 
 .hero-grid {
@@ -363,8 +457,15 @@ const goToPost = (post) => {
   inset: 0;
   opacity: 0.09;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.8) 1px, transparent 1px);
+    linear-gradient(
+      rgba(255, 255, 255, 0.8) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.8) 1px,
+      transparent 1px
+    );
   background-size: 80px 80px;
 }
 
@@ -395,11 +496,9 @@ const goToPost = (post) => {
   border: 1px solid rgba(255, 255, 255, 0.27);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
-
   display: flex;
   align-items: center;
   gap: 7px;
-
   font-size: 12px;
   font-weight: 700;
 }
@@ -426,7 +525,6 @@ const goToPost = (post) => {
   padding: 5px 5px 5px 17px;
   border-radius: 16px;
   background: #ffffff;
-
   display: flex;
   align-items: center;
   gap: 11px;
@@ -480,7 +578,6 @@ const goToPost = (post) => {
   cursor: pointer;
 }
 
-/* 통계 */
 .statistics {
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
@@ -490,7 +587,6 @@ const goToPost = (post) => {
   max-width: 760px;
   margin: 0 auto;
   padding: 20px 24px;
-
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 30px;
@@ -521,7 +617,6 @@ const goToPost = (post) => {
   font-size: 11px;
 }
 
-/* 콘텐츠 공통 */
 .home-content {
   width: 100%;
   max-width: 1100px;
@@ -572,7 +667,6 @@ const goToPost = (post) => {
   text-decoration: none;
 }
 
-/* 카테고리 */
 .category-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -606,11 +700,12 @@ const goToPost = (post) => {
 .category-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.76),
-    rgba(0, 0, 0, 0.05) 65%
-  );
+  background:
+    linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.76),
+      rgba(0, 0, 0, 0.05) 65%
+    );
 }
 
 .category-icon {
@@ -621,7 +716,6 @@ const goToPost = (post) => {
   height: 48px;
   border-radius: 14px;
   color: #ffffff;
-
   display: flex;
   align-items: center;
   justify-content: center;
@@ -676,9 +770,7 @@ const goToPost = (post) => {
   font-weight: 800;
 }
 
-/* 최근 커뮤니티 */
 .community-section {
-  /* 인기 관광 명소가 제거되어 카테고리 바로 아래에 배치 */
   margin-top: 64px !important;
 }
 
@@ -689,16 +781,14 @@ const goToPost = (post) => {
 }
 
 .post-card {
-  min-height: 103px;
-  padding: 16px;
+  min-height: 116px;
+  padding: 17px;
   border: 1px solid #e5e7eb;
   border-radius: 17px;
   background: #ffffff;
-
   display: flex;
   justify-content: space-between;
   gap: 16px;
-
   cursor: pointer;
   transition:
     transform 0.2s,
@@ -714,46 +804,21 @@ const goToPost = (post) => {
   min-width: 0;
 }
 
-.post-tags {
-  display: flex;
-  gap: 7px;
-  margin-bottom: 9px;
-}
-
-.post-tag,
-.post-notice {
-  padding: 4px 10px;
+.anonymous-label {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 4px 9px;
+  border: 1px solid #dbeafe;
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.tag-restaurant {
-  color: #f97316;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-}
-
-.tag-tour {
-  color: #059669;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-}
-
-.tag-festival {
-  color: #9333ea;
-  background: #faf5ff;
-  border: 1px solid #e9d5ff;
-}
-
-.post-notice {
-  color: #2563eb;
   background: #eff6ff;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .post-card h3 {
   overflow: hidden;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   color: #111827;
   font-size: 14px;
   font-weight: 800;
@@ -761,23 +826,19 @@ const goToPost = (post) => {
   white-space: nowrap;
 }
 
-.post-meta {
-  display: flex;
-  gap: 10px;
+.post-description {
+  overflow: hidden;
+  margin: 0;
   color: #64748b;
   font-size: 11px;
-}
-
-.post-meta span {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+  line-height: 1.55;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .post-side {
   flex-shrink: 0;
   color: #64748b;
-
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -786,6 +847,54 @@ const goToPost = (post) => {
 
 .post-side time {
   font-size: 10px;
+}
+
+.recent-state {
+  min-height: 190px;
+  padding: 34px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 17px;
+  background: #ffffff;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.recent-state p {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.recent-error {
+  color: #ef4444;
+}
+
+.recent-error p {
+  color: #64748b;
+}
+
+.recent-error button {
+  margin-top: 14px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.loading-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 800px) {
@@ -848,7 +957,7 @@ const goToPost = (post) => {
   }
 
   .post-card {
-    min-height: 112px;
+    min-height: 118px;
   }
 }
 </style>

@@ -1,25 +1,48 @@
 // src/api/index.js
-import axios from 'axios';
+import axios from "axios";
 
-// 공통 인스턴스 생성
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
-  timeout: 5000,
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ||
+    "http://127.0.0.1:8000/api",
+
+  timeout: 10000,
+
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// 요청 인터셉터 (예: 요청할 때마다 로컬 스토리지의 토큰을 헤더에 삽입)
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.response.use(
+  (response) => response,
+
+  (error) => {
+    const status = error.response?.status;
+    const detail = error.response?.data?.detail;
+
+    if (!error.response) {
+      console.error(
+        "백엔드 서버에 연결할 수 없습니다. FastAPI 실행 상태를 확인해주세요.",
+      );
+    } else if (status === 400) {
+      console.error("잘못된 요청입니다.", detail);
+    } else if (status === 403) {
+      console.error("비밀번호가 일치하지 않습니다.", detail);
+    } else if (status === 404) {
+      console.error("요청한 데이터를 찾을 수 없습니다.", detail);
+    } else if (status === 422) {
+      console.error(
+        "입력값 검증에 실패했습니다.",
+        error.response.data,
+      );
+    } else if (status >= 500) {
+      console.error("백엔드 서버 오류가 발생했습니다.", detail);
+    } else {
+      console.error("API 요청 중 오류가 발생했습니다.", error);
     }
-    return config;
+
+    return Promise.reject(error);
   },
-  (error) => Promise.reject(error)
 );
 
 export default api;
