@@ -1,10 +1,11 @@
 <script setup>
-import { MapPin, Bell, PenLine } from "lucide-vue-next";
+import { MapPin, PenLine } from "lucide-vue-next";
 </script>
 
 <template>
   <header class="app-header">
     <div class="header-inner">
+
       <!-- 로고 -->
       <RouterLink to="/" class="brand">
         <span class="brand-icon">
@@ -17,7 +18,8 @@ import { MapPin, Bell, PenLine } from "lucide-vue-next";
       </RouterLink>
 
       <!-- 메뉴 -->
-      <nav class="navigation" aria-label="주요 메뉴">
+      <nav class="navigation">
+
         <RouterLink to="/" class="nav-link">
           홈
         </RouterLink>
@@ -25,212 +27,163 @@ import { MapPin, Bell, PenLine } from "lucide-vue-next";
         <RouterLink to="/community" class="nav-link">
           커뮤니티
         </RouterLink>
+
+        <RouterLink to="/culture" class="nav-link">
+          문화
+        </RouterLink>
+
       </nav>
 
-      <!-- 우측 기능 -->
+      <!-- 우측 -->
       <div class="header-actions">
-        <button
-          type="button"
-          class="notification-button"
-          aria-label="알림"
-        >
-          <Bell :size="20" :stroke-width="1.8" />
-        </button>
 
         <RouterLink
           to="/community/write"
           class="write-button"
         >
-          <PenLine :size="16" :stroke-width="2" />
-          <span>글쓰기</span>
+          <PenLine :size="17" />
+          글쓰기
         </RouterLink>
+
       </div>
+
     </div>
   </header>
 </template>
 
 <style scoped>
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  width: 100%;
-  height: 60px;
-  background: #ffffff;
-  border-top: 1px solid #d1d5db;
-  border-bottom: 3px solid #2563eb;
+
+.app-header{
+    position:sticky;
+    top:0;
+    z-index:100;
+    background:#fff;
+    border-bottom:1px solid #e5e7eb;
 }
 
-.header-inner {
-  width: 100%;
-  max-width: 1100px;
-  height: 100%;
-  margin: 0 auto;
-  padding: 0 20px;
+.header-inner{
+    max-width:1200px;
+    margin:auto;
+    height:72px;
+    padding:0 24px;
 
-  display: flex;
-  align-items: center;
+    display:flex;
+    align-items:center;
 }
 
-/* 로고 */
 .brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  color: #111827;
+  gap: 10px;
   text-decoration: none;
-  flex-shrink: 0;
-}
-
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 11px;
-  background: #2563eb;
-  color: #ffffff;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
-}
-
-.brand-text {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-}
-
-.brand-text span {
-  color: #2563eb;
-}
-
-/* 메뉴 */
-.navigation {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 24px;
-}
-
-.nav-link {
-  min-width: 44px;
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 10px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition:
-    color 0.2s,
-    background-color 0.2s;
-}
-
-.nav-link:hover {
-  color: #2563eb;
-  background: #f1f5f9;
-}
-
-.nav-link.router-link-exact-active {
-  color: #2563eb;
-  background: #eff6ff;
-}
-
-/* 오른쪽 영역 */
-.header-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.notification-button {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 0;
   background: transparent;
-  color: #64748b;
-  border-radius: 50%;
-  cursor: pointer;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  transition:
-    color 0.2s,
-    background-color 0.2s;
 }
 
-.notification-button:hover {
+.brand.router-link-active,
+.brand.router-link-exact-active {
+  background: transparent;
+}
+
+.navigation .nav-link.router-link-active,
+.navigation .nav-link.router-link-exact-active {
+  background: #dbeafe;
   color: #2563eb;
-  background: #eff6ff;
 }
 
-.write-button {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #ffffff;
+.brand-icon{
+    width:38px;
+    height:38px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+    border-radius:12px;
 
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
+    background:#2563eb;
+    color:white;
 
-  transition:
-    background-color 0.2s,
-    transform 0.2s;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 }
 
-.write-button:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
+.brand-text{
+
+    color:#111827;
+
+    font-size:30px;
+    font-weight:800;
 }
 
-/* 모바일 */
-@media (max-width: 640px) {
-  .header-inner {
-    padding: 0 14px;
-  }
+.brand-text span{
 
-  .brand-text {
-    font-size: 16px;
-  }
-
-  .navigation {
-    margin-left: 12px;
-  }
-
-  .nav-link {
-    padding: 0 9px;
-    font-size: 13px;
-  }
-
-  .notification-button {
-    display: none;
-  }
-
-  .write-button {
-    width: 38px;
-    padding: 0;
-  }
-
-  .write-button span {
-    display: none;
-  }
+    color:#2563eb;
 }
+
+.navigation{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-left:24px;
+}
+
+.nav-link{
+
+    text-decoration:none;
+
+    color:#64748b;
+
+    font-weight:700;
+
+    padding:10px 18px;
+
+    border-radius:12px;
+
+    transition:.2s;
+}
+
+.nav-link:hover{
+
+    background:#eff6ff;
+
+    color:#2563eb;
+}
+
+.navigation .router-link-active {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.header-actions{
+    margin-left:auto;
+
+    display:flex;
+    align-items:center;
+}
+
+.write-button{
+
+    display:flex;
+    align-items:center;
+    gap:6px;
+
+    text-decoration:none;
+
+    color:white;
+
+    background:#2563eb;
+
+    height:42px;
+
+    padding:0 20px;
+
+    border-radius:999px;
+
+    font-weight:700;
+
+    box-shadow:0 5px 12px rgba(37,99,235,.25);
+}
+
+.write-button:hover{
+
+    background:#1d4ed8;
+}
+
 </style>

@@ -4,7 +4,6 @@ import { useRoute, useRouter } from "vue-router";
 import {
   Search,
   Filter,
-  PenLine,
   Eye,
   Heart,
   MessageSquare,
@@ -16,121 +15,132 @@ import {
 const route = useRoute();
 const router = useRouter();
 
-const POSTS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 6;
 
 const categories = [
   { key: "all", label: "전체" },
-  { key: "restaurant", label: "맛집" },
-  { key: "tour", label: "관광" },
-  { key: "festival", label: "축제" },
-  { key: "life", label: "생활" },
-  { key: "question", label: "질문" },
+  { key: "tour", label: "관광지" },
+  { key: "leisure", label: "레포츠" },
+  { key: "culture", label: "문화시설" },
+  { key: "shopping", label: "쇼핑" },
+  { key: "stay", label: "숙박" },
+  { key: "course", label: "여행코스" },
+  { key: "restaurant", label: "음식점" },
+  { key: "festival", label: "축제공연행사" },
 ];
 
-const posts = ref([
+const contents = ref([
   {
     content_id: 1,
-    category: "restaurant",
-    category_label: "맛집",
-    title: "구미 인동 신규 라멘집 발견 🍜 강추합니다",
-    content:
-      "인동 CGV 근처에 최근 오픈한 라멘집 다녀왔어요. 육수가 진하고 면도 쫄깃해서 만족스러웠습니다.",
-    author: "익명",
-    views: 847,
-    like_count: 124,
-    comment_count: 34,
-    created_at: "2026-07-13T15:30:00",
+    category: "tour",
+    category_label: "관광지",
+    title: "금오산 도립공원 — 구미의 상징 명산",
+    description:
+      "케이블카, 도선굴, 마애불 등 볼거리 가득한 구미의 대표 명산입니다.",
+    image_url:
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+    views: 4800,
+    like_count: 892,
+    comment_count: 134,
+    created_at: "2025-07-10T09:00:00",
   },
   {
     content_id: 2,
-    category: "tour",
-    category_label: "관광",
-    title: "금오산 등산 코스 완전 정복 가이드 (초보~중급)",
-    content:
-      "금오산을 여러 번 다녀온 경험을 바탕으로 초보자부터 중급자까지 이용하기 좋은 코스를 정리했습니다.",
-    author: "익명",
-    views: 1200,
-    like_count: 287,
-    comment_count: 62,
-    created_at: "2026-07-12T10:10:00",
+    category: "leisure",
+    category_label: "레포츠",
+    title: "낙동강 체육공원 카약 & 래프팅",
+    description:
+      "낙동강변에서 즐기는 카약, 래프팅, 자전거 등 다양한 수상·육상 레포츠 체험.",
+    image_url:
+      "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?auto=format&fit=crop&w=900&q=80",
+    views: 2300,
+    like_count: 421,
+    comment_count: 67,
+    created_at: "2025-07-09T10:30:00",
   },
   {
     content_id: 3,
-    category: "festival",
-    category_label: "축제",
-    title: "낙동강 벚꽃 축제 일정 공유해요 🌸",
-    content:
-      "올해 구미 벚꽃 축제 일정과 주요 프로그램을 정리했습니다. 방문 전에 교통 통제 구간도 확인해보세요.",
-    author: "익명",
-    views: 2200,
-    like_count: 445,
-    comment_count: 98,
-    created_at: "2026-07-11T09:20:00",
+    category: "culture",
+    category_label: "문화시설",
+    title: "구미 문화예술회관 — 문화의 중심",
+    description:
+      "클래식 콘서트, 연극, 뮤지컬 등 다양한 공연이 열리는 구미 최대 공연장.",
+    image_url:
+      "https://images.unsplash.com/photo-1507924538820-ede94a04019d?auto=format&fit=crop&w=900&q=80",
+    views: 1900,
+    like_count: 302,
+    comment_count: 43,
+    created_at: "2025-07-08T14:20:00",
   },
   {
     content_id: 4,
-    category: "restaurant",
-    category_label: "맛집",
-    title: "구미역 근처 공부하기 좋은 카페 모음",
-    content:
-      "구미역 반경 500m 안에서 콘센트와 좌석이 넉넉하고 공부하기 좋은 카페를 정리했습니다.",
-    author: "익명",
-    views: 934,
-    like_count: 167,
-    comment_count: 45,
-    created_at: "2026-07-10T13:40:00",
+    category: "shopping",
+    category_label: "쇼핑",
+    title: "구미 인동 로데오 쇼핑 거리",
+    description:
+      "구미 최대 번화가 인동 로데오 거리. 패션, 뷰티, 음식 등 트렌디한 쇼핑 명소.",
+    image_url:
+      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80",
+    views: 3100,
+    like_count: 512,
+    comment_count: 88,
+    created_at: "2025-07-07T17:40:00",
   },
   {
     content_id: 5,
-    category: "life",
-    category_label: "생활",
-    title: "구미 시내버스 이용할 때 알아두면 좋은 팁",
-    content:
-      "환승 시간, 자주 이용하는 노선, 막차 시간 확인 방법 등 구미 시내버스 이용 팁을 정리했습니다.",
-    author: "익명",
-    views: 623,
-    like_count: 85,
-    comment_count: 21,
-    created_at: "2026-07-09T18:00:00",
+    category: "stay",
+    category_label: "숙박",
+    title: "금오산 케이블카 숙박 패키지",
+    description:
+      "금오산 자락의 펜션·리조트 모음. 자연 속에서 즐기는 특별한 하루.",
+    image_url:
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80",
+    views: 1500,
+    like_count: 278,
+    comment_count: 52,
+    created_at: "2025-07-06T11:10:00",
   },
   {
     content_id: 6,
-    category: "question",
-    category_label: "질문",
-    title: "구미에서 혼자 가기 좋은 식당 추천해주세요",
-    content:
-      "혼자 식사하기 편하고 가격도 부담스럽지 않은 식당을 찾고 있습니다. 인동이나 구미역 근처면 좋겠습니다.",
-    author: "익명",
-    views: 512,
-    like_count: 43,
-    comment_count: 31,
-    created_at: "2026-07-08T12:25:00",
+    category: "course",
+    category_label: "여행코스",
+    title: "구미 당일치기 여행 코스 추천",
+    description:
+      "외지인도 쉽게 따라하는 구미 당일치기 최적 코스 3선.",
+    image_url:
+      "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80",
+    views: 5200,
+    like_count: 1000,
+    comment_count: 201,
+    created_at: "2025-07-05T08:50:00",
   },
   {
     content_id: 7,
-    category: "tour",
-    category_label: "관광",
-    title: "구미 야경 보기 좋은 장소가 어디인가요?",
-    content:
-      "차로 이동할 수 있고 주차가 편한 야경 명소를 찾고 있습니다. 가족과 함께 가기 좋은 곳이면 좋겠습니다.",
-    author: "익명",
-    views: 771,
-    like_count: 91,
-    comment_count: 27,
-    created_at: "2026-07-07T20:05:00",
+    category: "restaurant",
+    category_label: "음식점",
+    title: "구미 원평동 현지인 추천 맛집",
+    description:
+      "현지인이 자주 찾는 한식, 국밥, 분식 맛집을 한 번에 소개합니다.",
+    image_url:
+      "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=900&q=80",
+    views: 2700,
+    like_count: 486,
+    comment_count: 76,
+    created_at: "2025-07-04T12:25:00",
   },
   {
     content_id: 8,
     category: "festival",
-    category_label: "축제",
-    title: "이번 주말 구미 행사 정보 정리",
-    content:
-      "이번 주말에 가족과 함께 방문할 만한 구미 지역 행사와 체험 프로그램을 정리했습니다.",
-    author: "익명",
-    views: 1084,
-    like_count: 143,
-    comment_count: 39,
-    created_at: "2026-07-06T11:15:00",
+    category_label: "축제공연행사",
+    title: "구미 여름 축제 & 공연 일정",
+    description:
+      "여름밤을 채우는 지역 축제와 공연 일정을 정리했습니다.",
+    image_url:
+      "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80",
+    views: 3600,
+    like_count: 744,
+    comment_count: 121,
+    created_at: "2025-07-03T18:00:00",
   },
 ]);
 
@@ -144,16 +154,19 @@ const selectedCategory = ref(
 const selectedSort = ref("latest");
 const currentPage = ref(1);
 
-const filteredPosts = computed(() => {
+const filteredContents = computed(() => {
   const keyword = appliedKeyword.value.toLowerCase();
 
-  let result = posts.value.filter((post) => {
+  let result = contents.value.filter((item) => {
     const matchesCategory =
       selectedCategory.value === "all" ||
-      post.category === selectedCategory.value;
+      item.category === selectedCategory.value;
 
-    const searchableText = `${post.title} ${post.content}`.toLowerCase();
-    const matchesKeyword = !keyword || searchableText.includes(keyword);
+    const searchableText =
+      `${item.title} ${item.description}`.toLowerCase();
+
+    const matchesKeyword =
+      !keyword || searchableText.includes(keyword);
 
     return matchesCategory && matchesKeyword;
   });
@@ -168,14 +181,18 @@ const filteredPosts = computed(() => {
 });
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredPosts.value.length / POSTS_PER_PAGE)),
+  Math.max(
+    1,
+    Math.ceil(filteredContents.value.length / ITEMS_PER_PAGE),
+  ),
 );
 
-const paginatedPosts = computed(() => {
-  const startIndex = (currentPage.value - 1) * POSTS_PER_PAGE;
-  return filteredPosts.value.slice(
+const paginatedContents = computed(() => {
+  const startIndex = (currentPage.value - 1) * ITEMS_PER_PAGE;
+
+  return filteredContents.value.slice(
     startIndex,
-    startIndex + POSTS_PER_PAGE,
+    startIndex + ITEMS_PER_PAGE,
   );
 });
 
@@ -197,18 +214,13 @@ const formatDate = (dateTime) => {
   return dateTime.slice(0, 10).replaceAll("-", ".");
 };
 
-const truncateContent = (content, maxLength = 70) => {
-  if (!content || content.length <= maxLength) return content;
-  return `${content.slice(0, maxLength)}...`;
-};
-
 const submitSearch = () => {
   appliedKeyword.value = searchInput.value.trim();
   currentPage.value = 1;
 
   router.replace({
     query: appliedKeyword.value
-      ? { ...route.query, keyword: appliedKeyword.value }
+      ? { keyword: appliedKeyword.value }
       : {},
   });
 };
@@ -222,13 +234,12 @@ const selectCategory = (categoryKey) => {
     : {};
 
   if (categoryKey === "all") {
-    router.push({ name: "community", query });
+    router.push({ path: "/culture", query });
     return;
   }
 
   router.push({
-    name: "community-category",
-    params: { category: categoryKey },
+    path: `/culture/${categoryKey}`,
     query,
   });
 };
@@ -240,18 +251,8 @@ const goToPage = (pageNumber) => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-const goToDetail = (post) => {
-  router.push({
-    name: "community-detail",
-    params: {
-      category: post.category,
-      id: post.content_id,
-    },
-  });
-};
-
-const goToWrite = () => {
-  router.push({ name: "community-write" });
+const goToDetail = (item) => {
+  router.push(`/culture/${item.category}/${item.content_id}`);
 };
 
 watch(
@@ -281,33 +282,29 @@ watch(totalPages, (pageCount) => {
 </script>
 
 <template>
-  <main class="community-page">
-    <div class="community-container">
+  <main class="culture-page">
+    <div class="culture-container">
       <header class="page-header">
-        <div>
-          <h1>커뮤니티</h1>
-          <p>구미 시민과 여행자가 함께하는 정보 공간</p>
-        </div>
-
-        <button type="button" class="write-button" @click="goToWrite">
-          <PenLine :size="17" />
-          <span>글쓰기</span>
-        </button>
+        <h1>문화</h1>
+        <p>구미의 관광지, 레포츠, 문화시설, 행사 정보</p>
       </header>
 
       <section class="filter-panel">
         <form class="search-form" @submit.prevent="submitSearch">
           <div class="search-input-wrapper">
             <Search class="search-icon" :size="20" />
+
             <input
               v-model="searchInput"
               type="search"
-              placeholder="제목, 내용으로 검색..."
-              aria-label="게시글 검색"
+              placeholder="장소, 행사 이름으로 검색..."
+              aria-label="문화 콘텐츠 검색"
             />
           </div>
 
-          <button type="submit" class="search-button">검색</button>
+          <button type="submit" class="search-button">
+            검색
+          </button>
         </form>
 
         <div class="filter-row">
@@ -331,62 +328,72 @@ watch(totalPages, (pageCount) => {
           <div class="sort-wrapper">
             <select
               v-model="selectedSort"
-              aria-label="게시글 정렬"
+              aria-label="문화 콘텐츠 정렬"
               @change="currentPage = 1"
             >
               <option value="latest">최신순</option>
               <option value="popular">조회순</option>
             </select>
+
             <ChevronDown :size="16" class="sort-icon" />
           </div>
         </div>
       </section>
 
-      <p class="post-count">
-        총 <strong>{{ filteredPosts.length }}</strong>개의 게시글
+      <p class="content-count">
+        총 <strong>{{ filteredContents.length }}</strong>개의 콘텐츠
       </p>
 
-      <section v-if="paginatedPosts.length" class="post-list">
+      <section
+        v-if="paginatedContents.length"
+        class="culture-grid"
+      >
         <article
-          v-for="post in paginatedPosts"
-          :key="post.content_id"
-          class="post-card"
+          v-for="item in paginatedContents"
+          :key="item.content_id"
+          class="culture-card"
           tabindex="0"
           role="button"
-          @click="goToDetail(post)"
-          @keydown.enter="goToDetail(post)"
+          @click="goToDetail(item)"
+          @keydown.enter="goToDetail(item)"
         >
-          <div class="post-card-top">
+          <div class="image-area">
+            <img :src="item.image_url" :alt="item.title" />
+
             <span
-              :class="['category-tag', `category-${post.category}`]"
+              :class="[
+                'category-tag',
+                `category-${item.category}`,
+              ]"
             >
-              # {{ post.category_label }}
+              # {{ item.category_label }}
             </span>
-            <time>{{ formatDate(post.created_at) }}</time>
-          </div>
 
-          <h2>{{ post.title }}</h2>
-          <p class="post-summary">
-            {{ truncateContent(post.content) }}
-          </p>
+            <div class="image-stats">
+              <span>
+                <Eye :size="13" />
+                {{ formatNumber(item.views) }}
+              </span>
 
-          <div class="post-card-bottom">
-            <div class="post-stats">
               <span>
-                <Eye :size="15" />
-                {{ formatNumber(post.views) }}
-              </span>
-              <span>
-                <Heart :size="15" />
-                {{ formatNumber(post.like_count) }}
-              </span>
-              <span>
-                <MessageSquare :size="15" />
-                {{ formatNumber(post.comment_count) }}
+                <Heart :size="13" />
+                {{ formatNumber(item.like_count) }}
               </span>
             </div>
+          </div>
 
-            <span class="post-author">{{ post.author }}</span>
+          <div class="card-content">
+            <h2>{{ item.title }}</h2>
+            <p>{{ item.description }}</p>
+
+            <footer class="card-footer">
+              <time>{{ formatDate(item.created_at) }}</time>
+
+              <span>
+                <MessageSquare :size="13" />
+                {{ item.comment_count }}
+              </span>
+            </footer>
           </div>
         </article>
       </section>
@@ -400,7 +407,7 @@ watch(totalPages, (pageCount) => {
       <nav
         v-if="totalPages > 1"
         class="pagination"
-        aria-label="게시글 페이지 이동"
+        aria-label="문화 콘텐츠 페이지 이동"
       >
         <button
           type="button"
@@ -440,24 +447,20 @@ watch(totalPages, (pageCount) => {
 </template>
 
 <style scoped>
-.community-page {
+.culture-page {
   min-height: 100vh;
   background: #f6f8fb;
 }
 
-.community-container {
+.culture-container {
   width: 100%;
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 34px 24px 72px;
 }
 
 .page-header {
   margin-bottom: 25px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
 }
 
 .page-header h1 {
@@ -472,28 +475,6 @@ watch(totalPages, (pageCount) => {
   margin: 0;
   color: #64748b;
   font-size: 14px;
-}
-
-.write-button {
-  min-width: 87px;
-  height: 38px;
-  padding: 0 17px;
-  border: 0;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.24);
-}
-
-.write-button:hover {
-  background: #1d4ed8;
 }
 
 .filter-panel {
@@ -619,24 +600,24 @@ watch(totalPages, (pageCount) => {
   transform: translateY(-50%);
 }
 
-.post-count {
-  margin: 17px 3px 12px;
+.content-count {
+  margin: 25px 3px 14px;
   color: #64748b;
   font-size: 12px;
 }
 
-.post-count strong {
+.content-count strong {
   color: #0f172a;
 }
 
-.post-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.culture-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 17px;
 }
 
-.post-card {
-  padding: 18px 20px;
+.culture-card {
+  overflow: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 17px;
   background: #ffffff;
@@ -647,106 +628,145 @@ watch(totalPages, (pageCount) => {
     border-color 0.2s ease;
 }
 
-.post-card:hover {
+.culture-card:hover {
   border-color: #bfdbfe;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.07);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.09);
 }
 
-.post-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
+.image-area {
+  position: relative;
+  height: 192px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.image-area::after {
+  position: absolute;
+  inset: 45% 0 0;
+  content: "";
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(15, 23, 42, 0.62)
+  );
+}
+
+.image-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.culture-card:hover .image-area img {
+  transform: scale(1.04);
 }
 
 .category-tag {
-  padding: 4px 10px;
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  left: 12px;
+  padding: 5px 10px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 800;
 }
 
-.category-restaurant {
-  color: #f97316;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-}
-
 .category-tour {
   color: #059669;
   background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+}
+
+.category-leisure {
+  color: #0284c7;
+  background: #f0f9ff;
+}
+
+.category-culture {
+  color: #d946ef;
+  background: #fdf4ff;
+}
+
+.category-shopping {
+  color: #db2777;
+  background: #fdf2f8;
+}
+
+.category-stay {
+  color: #4f46e5;
+  background: #eef2ff;
+}
+
+.category-course {
+  color: #ea580c;
+  background: #fff7ed;
+}
+
+.category-restaurant {
+  color: #b45309;
+  background: #fffbeb;
 }
 
 .category-festival {
-  color: #9333ea;
-  background: #faf5ff;
-  border: 1px solid #e9d5ff;
+  color: #7c3aed;
+  background: #f5f3ff;
 }
 
-.category-life {
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+.image-stats {
+  position: absolute;
+  z-index: 1;
+  right: 12px;
+  bottom: 12px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
 }
 
-.category-question {
-  color: #475569;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+.image-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
-.post-card time {
-  flex-shrink: 0;
+.card-content {
+  padding: 17px 16px 15px;
+}
+
+.card-content h2 {
+  margin: 0 0 9px;
+  color: #0f172a;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+}
+
+.card-content p {
+  min-height: 42px;
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.card-footer {
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   color: #64748b;
   font-size: 10px;
 }
 
-.post-card h2 {
-  margin: 10px 0 8px;
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: -0.25px;
-}
-
-.post-summary {
-  overflow: hidden;
-  margin: 0;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.post-card-bottom {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.post-stats {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #64748b;
-  font-size: 12px;
-}
-
-.post-stats span {
-  display: flex;
+.card-footer span {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-
-.post-author {
-  color: #64748b;
-  font-size: 11px;
 }
 
 .empty-state {
@@ -770,7 +790,7 @@ watch(totalPages, (pageCount) => {
 }
 
 .pagination {
-  margin-top: 28px;
+  margin-top: 31px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -779,12 +799,12 @@ watch(totalPages, (pageCount) => {
 
 .pagination-arrow,
 .pagination-number {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   padding: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #ffffff;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: #475569;
   display: flex;
   align-items: center;
@@ -795,33 +815,18 @@ watch(totalPages, (pageCount) => {
 }
 
 .pagination-number.active {
-  border-color: #2563eb;
   background: #2563eb;
   color: #ffffff;
 }
 
 .pagination-arrow:disabled {
   cursor: not-allowed;
-  opacity: 0.38;
+  opacity: 0.35;
 }
 
-@media (max-width: 640px) {
-  .community-container {
-    padding: 26px 16px 56px;
-  }
-
-  .page-header h1 {
-    font-size: 23px;
-  }
-
-  .write-button {
-    min-width: 40px;
-    width: 40px;
-    padding: 0;
-  }
-
-  .write-button span {
-    display: none;
+@media (max-width: 900px) {
+  .culture-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .filter-row {
@@ -832,20 +837,27 @@ watch(totalPages, (pageCount) => {
   .sort-wrapper {
     align-self: flex-end;
   }
+}
 
-  .post-card {
-    padding: 16px;
+@media (max-width: 600px) {
+  .culture-container {
+    padding: 26px 16px 56px;
   }
 
-  .post-card h2 {
-    font-size: 14px;
+  .page-header h1 {
+    font-size: 23px;
   }
 
-  .post-summary {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+  .culture-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .image-area {
+    height: 220px;
+  }
+
+  .category-button {
+    padding: 0 11px;
   }
 }
 </style>

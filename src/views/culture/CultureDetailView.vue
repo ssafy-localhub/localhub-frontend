@@ -3,18 +3,20 @@ import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   ChevronRight,
-  UserRound,
   Clock3,
   Eye,
-  Pencil,
-  Trash2,
   Heart,
   MessageSquare,
+  MapPin,
+  Phone,
+  Globe2,
+  Navigation,
+  ImageIcon,
   Send,
-  ArrowLeft,
+  UserRound,
   ChevronLeft,
-  X,
-  LockKeyhole,
+  ArrowLeft,
+  CalendarDays,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -33,86 +35,101 @@ const router = useRouter();
 
 const COMMENTS_PER_PAGE = 5;
 
-const categoryLabels = {
-  restaurant: "맛집",
-  tour: "관광",
-  festival: "축제",
-  life: "생활",
-  question: "질문",
-};
-
-const post = ref({
-  content_id: Number(props.id || route.params.id || 1),
-  category: props.category || route.params.category || "restaurant",
-  title: "구미 인동 신규 라멘집 발견 🍜 강추합니다",
-  content: [
-    "인동 CGV 근처에 최근 오픈한 '멘야 하루카제'라는 라멘집을 다녀왔어요.",
-    "육수가 진하고 깔끔한데 느끼하지 않고, 면발도 탱탱해서 정말 맛있더라고요. 차슈가 두툼하게 올라가 있고 반숙 계란도 잘 절여져 있어요.",
-    "웨이팅이 평일 점심엔 30분, 주말엔 1시간 넘게 걸리는데 충분히 기다릴 가치가 있습니다. 가격은 기본 쇼유라멘 9,500원, 특제 라멘 12,000원이에요.",
-    "주차는 바로 옆 CGV 주차장 이용하시면 됩니다. 꼭 한 번 가보세요!",
-  ],
-  author: "익명",
-  views: 847,
-  like_count: 124,
+/*
+  공공데이터 기반 더미 상세 데이터입니다.
+  추후 FastAPI 연동 시 GET /api/culture/:contentId 응답으로 교체하면 됩니다.
+*/
+const culture = ref({
+  contentid: String(props.id || route.params.id || "3035970"),
+  contenttypeid: "12",
+  category: props.category || route.params.category || "leisure",
+  category_label: "레포츠",
+  title: "구미낙동강체육공원",
+  addr1: "경상북도 구미시 낙동제방길 200",
+  addr2: "(양호동)",
+  zipcode: "39193",
+  tel: "",
+  homepage: "",
+  mapx: "128.3677035180",
+  mapy: "36.1376514681",
+  firstimage:
+    "https://tong.visitkorea.or.kr/cms/resource/71/4067671_image2_1.jpg",
+  firstimage2:
+    "https://tong.visitkorea.or.kr/cms/resource/71/4067671_image3_1.jpg",
+  createdtime: "20231110120822",
+  modifiedtime: "20260610113357",
+  views: 2300,
+  like_count: 421,
   comment_count: 7,
-  created_at: "2026-07-13T14:10:00",
-  password: "1234",
+  overview: [
+    "구미낙동강체육공원은 낙동강변을 따라 조성된 구미의 대표적인 여가·체육 공간입니다. 넓은 잔디광장과 산책로, 자전거길이 마련되어 있어 시민과 관광객 모두 편하게 이용할 수 있습니다.",
+    "축구장, 야구장, 농구장 등 다양한 체육시설과 계절별 행사 공간이 함께 구성되어 있으며, 가족 단위 나들이와 가벼운 운동 장소로도 인기가 높습니다.",
+    "공원 방문 전 행사 일정과 일부 시설의 운영 여부를 확인하는 것을 권장합니다.",
+  ],
+  info_items: [
+    { label: "주소", value: "경상북도 구미시 낙동제방길 200 (양호동)" },
+    { label: "우편번호", value: "39193" },
+    { label: "전화번호", value: "제공된 정보 없음" },
+    { label: "이용시간", value: "상시 이용 가능 · 시설별 상이" },
+    { label: "주차", value: "공원 내 주차장 이용 가능" },
+    { label: "좌표", value: "위도 36.137651 · 경도 128.367704" },
+  ],
 });
 
 const comments = ref([
   {
     comment_id: 1,
-    content_id: 1,
+    culture_content_id: culture.value.contentid,
     author: "익명",
-    content: "정말 유용한 정보 감사해요! 주말에 꼭 가봐야겠네요 😊",
+    content: "산책로가 넓고 자전거 타기 좋아요. 해질 무렵 풍경도 예쁩니다 😊",
     like_count: 12,
     created_at: "2026-07-13T15:10:00",
   },
   {
     comment_id: 2,
-    content_id: 1,
+    culture_content_id: culture.value.contentid,
     author: "익명",
-    content: "저도 다녀왔는데 완전 동의합니다. 특히 말씀하신 부분이 최고였어요!",
+    content: "주말에는 사람이 많지만 주차 공간은 생각보다 넉넉했어요.",
     like_count: 8,
     created_at: "2026-07-13T16:20:00",
   },
   {
     comment_id: 3,
-    content_id: 1,
+    culture_content_id: culture.value.contentid,
     author: "익명",
-    content: "혹시 주차 공간은 넉넉한가요? 차 가져가려고요.",
+    content: "아이들과 공놀이하기 좋은 장소인지 궁금합니다.",
     like_count: 3,
     created_at: "2026-07-14T09:05:00",
   },
   {
     comment_id: 4,
-    content_id: 1,
+    culture_content_id: culture.value.contentid,
     author: "익명",
-    content: "주차는 제 경험상 평일엔 괜찮았어요. 주말엔 좀 붐빌 수 있어요!",
+    content: "잔디광장이 넓어서 가족 단위로 방문하기 괜찮았습니다.",
     like_count: 5,
     created_at: "2026-07-14T09:40:00",
   },
   {
     comment_id: 5,
-    content_id: 1,
+    culture_content_id: culture.value.contentid,
     author: "익명",
-    content: "좋은 정보 감사합니다 북마크 해뒀어요 ✨",
+    content: "행사 있는 날에는 주변 도로가 조금 붐빌 수 있어요.",
     like_count: 7,
     created_at: "2026-07-14T10:15:00",
   },
   {
     comment_id: 6,
-    content_id: 1,
+    culture_content_id: culture.value.contentid,
     author: "익명",
-    content: "가격 정보까지 있어서 도움이 됐습니다.",
+    content: "자전거 코스가 잘 연결돼 있어서 다시 가고 싶어요.",
     like_count: 4,
     created_at: "2026-07-14T11:00:00",
   },
   {
     comment_id: 7,
-    content_id: 1,
+    culture_content_id: culture.value.contentid,
     author: "익명",
-    content: "다음에는 다른 메뉴도 소개해주세요!",
+    content: "공원 근처 편의시설 정보도 추가되면 좋겠습니다.",
     like_count: 6,
     created_at: "2026-07-14T11:30:00",
   },
@@ -120,15 +137,7 @@ const comments = ref([
 
 const commentText = ref("");
 const currentCommentPage = ref(1);
-const likedPost = ref(false);
-const isPasswordModalOpen = ref(false);
-const passwordAction = ref("");
-const passwordInput = ref("");
-const passwordError = ref("");
-
-const categoryLabel = computed(
-  () => categoryLabels[post.value.category] || "커뮤니티",
-);
+const likedCulture = ref(false);
 
 const totalCommentPages = computed(() =>
   Math.max(1, Math.ceil(comments.value.length / COMMENTS_PER_PAGE)),
@@ -149,8 +158,17 @@ const commentPageNumbers = computed(() =>
   ),
 );
 
+const fullAddress = computed(() =>
+  [culture.value.addr1, culture.value.addr2].filter(Boolean).join(" "),
+);
+
 const formatDate = (dateTime) => {
   if (!dateTime) return "";
+
+  if (/^\d{14}$/.test(dateTime)) {
+    return `${dateTime.slice(0, 4)}.${dateTime.slice(4, 6)}.${dateTime.slice(6, 8)}`;
+  }
+
   return dateTime.slice(0, 10).replaceAll("-", ".");
 };
 
@@ -163,11 +181,6 @@ const formatNumber = (value) => {
   return value.toLocaleString("ko-KR");
 };
 
-const togglePostLike = () => {
-  likedPost.value = !likedPost.value;
-  post.value.like_count += likedPost.value ? 1 : -1;
-};
-
 const submitComment = () => {
   const trimmedText = commentText.value.trim();
   if (!trimmedText) return;
@@ -177,16 +190,21 @@ const submitComment = () => {
 
   comments.value.unshift({
     comment_id: nextId,
-    content_id: post.value.content_id,
+    culture_content_id: culture.value.contentid,
     author: "익명",
     content: trimmedText,
     like_count: 0,
     created_at: new Date().toISOString(),
   });
 
-  post.value.comment_count = comments.value.length;
+  culture.value.comment_count = comments.value.length;
   commentText.value = "";
   currentCommentPage.value = 1;
+};
+
+const toggleCultureLike = () => {
+  likedCulture.value = !likedCulture.value;
+  culture.value.like_count += likedCulture.value ? 1 : -1;
 };
 
 const likeComment = (comment) => {
@@ -205,145 +223,144 @@ const goToCommentPage = (pageNumber) => {
 };
 
 const goBackToList = () => {
-  router.push({
-    name:
-      post.value.category && post.value.category !== "all"
-        ? "community-category"
-        : "community",
-    params:
-      post.value.category && post.value.category !== "all"
-        ? { category: post.value.category }
-        : {},
-  });
+  router.push({ name: "culture" });
 };
 
-const openPasswordModal = (action) => {
-  passwordAction.value = action;
-  passwordInput.value = "";
-  passwordError.value = "";
-  isPasswordModalOpen.value = true;
-};
-
-const closePasswordModal = () => {
-  isPasswordModalOpen.value = false;
-  passwordInput.value = "";
-  passwordError.value = "";
-};
-
-const confirmPassword = () => {
-  if (passwordInput.value !== post.value.password) {
-    passwordError.value = "비밀번호가 일치하지 않습니다.";
-    return;
-  }
-
-  if (passwordAction.value === "edit") {
-    closePasswordModal();
-    router.push({
-      name: "community-edit",
-      params: { id: post.value.content_id },
-      query: { category: post.value.category },
-    });
-    return;
-  }
-
-  if (passwordAction.value === "delete") {
-    const confirmed = window.confirm("게시글을 삭제하시겠습니까?");
-    if (!confirmed) return;
-
-    closePasswordModal();
-    window.alert("더미 데이터 기준으로 삭제 처리되었습니다.");
-    goBackToList();
-  }
+const openMap = () => {
+  const query = encodeURIComponent(fullAddress.value || culture.value.title);
+  window.open(`https://map.kakao.com/?q=${query}`, "_blank", "noopener");
 };
 </script>
 
 <template>
-  <main class="detail-page">
+  <main class="culture-detail-page">
     <div class="detail-container">
       <nav class="breadcrumb" aria-label="현재 위치">
         <RouterLink to="/">홈</RouterLink>
         <ChevronRight :size="15" />
-        <RouterLink to="/community">커뮤니티</RouterLink>
+        <RouterLink to="/culture">문화</RouterLink>
         <ChevronRight :size="15" />
-        <span>{{ post.title }}</span>
+        <span>{{ culture.title }}</span>
       </nav>
 
-      <article class="post-card">
-        <header class="post-header">
+      <article class="culture-card">
+        <header class="culture-header">
           <span
             :class="[
               'category-tag',
-              `category-${post.category}`,
+              `category-${culture.category}`,
             ]"
           >
-            # {{ categoryLabel }}
+            # {{ culture.category_label }}
           </span>
 
-          <h1>{{ post.title }}</h1>
+          <h1>{{ culture.title }}</h1>
 
-          <div class="post-info-row">
-            <div class="post-meta">
-              <span class="author-avatar">
-                <UserRound :size="15" />
-              </span>
-              <strong>{{ post.author }}</strong>
+          <div class="culture-meta">
+            <span>
+              <Clock3 :size="15" />
+              {{ formatDate(culture.modifiedtime) }}
+            </span>
 
-              <span>
-                <Clock3 :size="15" />
-                {{ formatDate(post.created_at) }}
-              </span>
+            <span>
+              <Eye :size="15" />
+              {{ formatNumber(culture.views) }}
+            </span>
 
-              <span>
-                <Eye :size="15" />
-                {{ formatNumber(post.views) }}
-              </span>
-            </div>
-
-            <div class="post-actions">
-              <button
-                type="button"
-                class="action-button"
-                @click="openPasswordModal('edit')"
-              >
-                <Pencil :size="15" />
-                수정
-              </button>
-
-              <button
-                type="button"
-                class="action-button delete"
-                @click="openPasswordModal('delete')"
-              >
-                <Trash2 :size="15" />
-                삭제
-              </button>
-            </div>
+            <span>
+              <Heart :size="15" />
+              {{ formatNumber(culture.like_count) }}
+            </span>
           </div>
         </header>
 
-        <section class="post-content">
-          <p
-            v-for="(paragraph, index) in post.content"
-            :key="index"
-          >
-            {{ paragraph }}
-          </p>
+        <figure class="main-image">
+          <img :src="culture.firstimage" :alt="culture.title" />
+          <figcaption>
+            <ImageIcon :size="14" />
+            대표 이미지
+          </figcaption>
+        </figure>
+
+        <section class="culture-body">
+          <div class="overview">
+            <p
+              v-for="(paragraph, index) in culture.overview"
+              :key="index"
+            >
+              {{ paragraph }}
+            </p>
+          </div>
+
+          <section class="information-section">
+            <h2>상세 정보</h2>
+
+            <dl class="information-grid">
+              <div
+                v-for="item in culture.info_items"
+                :key="item.label"
+                class="information-item"
+              >
+                <dt>{{ item.label }}</dt>
+                <dd>{{ item.value }}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="location-section">
+            <div class="location-heading">
+              <div>
+                <span>LOCATION</span>
+                <h2>위치 정보</h2>
+              </div>
+
+              <button type="button" @click="openMap">
+                <Navigation :size="16" />
+                지도에서 보기
+              </button>
+            </div>
+
+            <div class="location-card">
+              <MapPin :size="22" />
+              <div>
+                <strong>{{ culture.title }}</strong>
+                <p>{{ fullAddress }}</p>
+                <small>
+                  {{ culture.mapy }}, {{ culture.mapx }}
+                </small>
+              </div>
+            </div>
+          </section>
+
+          <figure v-if="culture.firstimage2" class="sub-image">
+            <img :src="culture.firstimage2" :alt="`${culture.title} 추가 이미지`" />
+          </figure>
+
+          <section class="source-notice">
+            <Globe2 :size="17" />
+            <div>
+              <strong>공공데이터 기반 관광 정보</strong>
+              <p>
+                실제 운영시간과 시설 이용 정보는 현장 사정에 따라 변경될 수 있습니다.
+              </p>
+            </div>
+          </section>
         </section>
 
-        <footer class="post-footer">
+        <footer class="culture-footer">
           <button
             type="button"
-            :class="['like-button', { active: likedPost }]"
-            @click="togglePostLike"
+            :class="['like-button', { active: likedCulture }]"
+            @click="toggleCultureLike"
           >
             <Heart
               :size="18"
-              :fill="likedPost ? 'currentColor' : 'none'"
+              :fill="likedCulture ? 'currentColor' : 'none'"
             />
-            {{ formatNumber(post.like_count) }}
+            {{ formatNumber(culture.like_count) }}
           </button>
 
-          <span class="comment-count">
+          <span>
             <MessageSquare :size="17" />
             댓글 {{ comments.length }}
           </span>
@@ -363,7 +380,7 @@ const confirmPassword = () => {
           <textarea
             v-model="commentText"
             maxlength="500"
-            placeholder="댓글을 입력해주세요. 서로를 존중하는 댓글 문화를 만들어요 💙"
+            placeholder="이 장소에 대한 방문 후기나 유용한 정보를 남겨주세요 💙"
             aria-label="댓글 내용"
           ></textarea>
 
@@ -436,9 +453,7 @@ const confirmPassword = () => {
 
           <button
             type="button"
-            :disabled="
-              currentCommentPage === totalCommentPages
-            "
+            :disabled="currentCommentPage === totalCommentPages"
             aria-label="다음 댓글 페이지"
             @click="goToCommentPage(currentCommentPage + 1)"
           >
@@ -456,74 +471,11 @@ const confirmPassword = () => {
         목록으로
       </button>
     </div>
-
-    <div
-      v-if="isPasswordModalOpen"
-      class="modal-backdrop"
-      @click.self="closePasswordModal"
-    >
-      <section
-        class="password-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="password-modal-title"
-      >
-        <button
-          type="button"
-          class="modal-close"
-          aria-label="닫기"
-          @click="closePasswordModal"
-        >
-          <X :size="19" />
-        </button>
-
-        <span class="modal-icon">
-          <LockKeyhole :size="23" />
-        </span>
-
-        <h2 id="password-modal-title">비밀번호 확인</h2>
-        <p>
-          게시글 {{ passwordAction === "edit" ? "수정" : "삭제" }}을
-          위해 작성 시 입력한 비밀번호를 입력해주세요.
-        </p>
-
-        <input
-          v-model="passwordInput"
-          type="password"
-          placeholder="비밀번호 입력"
-          @keyup.enter="confirmPassword"
-        />
-
-        <span v-if="passwordError" class="password-error">
-          {{ passwordError }}
-        </span>
-
-        <div class="modal-actions">
-          <button
-            type="button"
-            class="modal-cancel"
-            @click="closePasswordModal"
-          >
-            취소
-          </button>
-
-          <button
-            type="button"
-            class="modal-confirm"
-            @click="confirmPassword"
-          >
-            확인
-          </button>
-        </div>
-
-        <small>더미 비밀번호: 1234</small>
-      </section>
-    </div>
   </main>
 </template>
 
 <style scoped>
-.detail-page {
+.culture-detail-page {
   min-height: 100vh;
   background: #f6f8fb;
 }
@@ -562,17 +514,17 @@ const confirmPassword = () => {
   text-overflow: ellipsis;
 }
 
-.post-card,
+.culture-card,
 .comment-section {
+  overflow: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
 }
 
-.post-header {
+.culture-header {
   padding: 28px 26px 21px;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 .category-tag {
@@ -583,10 +535,10 @@ const confirmPassword = () => {
   font-weight: 800;
 }
 
-.category-restaurant {
-  color: #f97316;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
+.category-leisure {
+  color: #0284c7;
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
 }
 
 .category-tour {
@@ -595,26 +547,14 @@ const confirmPassword = () => {
   border: 1px solid #a7f3d0;
 }
 
-.category-festival {
-  color: #9333ea;
-  background: #faf5ff;
-  border: 1px solid #e9d5ff;
+.category-culture {
+  color: #d946ef;
+  background: #fdf4ff;
+  border: 1px solid #f5d0fe;
 }
 
-.category-life {
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-}
-
-.category-question {
-  color: #475569;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-}
-
-.post-header h1 {
-  margin: 17px 0 20px;
+.culture-header h1 {
+  margin: 17px 0 16px;
   color: #0f172a;
   font-size: 27px;
   line-height: 1.35;
@@ -622,101 +562,202 @@ const confirmPassword = () => {
   letter-spacing: -1px;
 }
 
-.post-info-row {
+.culture-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.post-meta,
-.post-actions {
-  display: flex;
-  align-items: center;
-}
-
-.post-meta {
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   color: #64748b;
   font-size: 12px;
 }
 
-.post-meta span:not(.author-avatar) {
+.culture-meta span {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
 
-.author-avatar,
-.comment-avatar {
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #f1f5f9;
-  color: #64748b;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.main-image {
+  position: relative;
+  height: 360px;
+  margin: 0;
+  overflow: hidden;
+  background: #e2e8f0;
 }
 
-.author-avatar {
-  width: 29px;
-  height: 29px;
+.main-image img,
+.sub-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.post-meta strong {
-  color: #0f172a;
-}
-
-.post-actions {
-  gap: 8px;
-}
-
-.action-button {
-  height: 35px;
-  padding: 0 14px;
-  border: 1px solid #dbe2ea;
+.main-image figcaption {
+  position: absolute;
+  right: 14px;
+  bottom: 13px;
+  padding: 6px 10px;
   border-radius: 999px;
-  background: #ffffff;
-  color: #0f172a;
+  background: rgba(15, 23, 42, 0.7);
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 10px;
   font-weight: 700;
-  cursor: pointer;
 }
 
-.action-button:hover {
-  background: #f8fafc;
+.culture-body {
+  padding: 30px 26px;
 }
 
-.action-button.delete {
-  border-color: #fecaca;
-}
-
-.action-button.delete:hover {
-  color: #dc2626;
-  background: #fef2f2;
-}
-
-.post-content {
-  min-height: 285px;
-  padding: 28px 26px;
+.overview {
   color: #0f172a;
   font-size: 14px;
   line-height: 1.95;
 }
 
-.post-content p {
-  margin: 0 0 22px;
+.overview p {
+  margin: 0 0 21px;
 }
 
-.post-content p:last-child {
-  margin-bottom: 0;
+.information-section,
+.location-section {
+  margin-top: 32px;
 }
 
-.post-footer {
+.information-section h2,
+.location-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.information-grid {
+  margin: 17px 0 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.information-item {
+  min-height: 54px;
+  padding: 13px 0;
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.information-item dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.information-item dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.location-heading {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.location-heading span {
+  display: block;
+  margin-bottom: 5px;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+}
+
+.location-heading button {
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid #bfdbfe;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.location-card {
+  padding: 17px;
+  border: 1px solid #dbeafe;
+  border-radius: 15px;
+  background: #f8fbff;
+  color: #2563eb;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.location-card div {
+  min-width: 0;
+}
+
+.location-card strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.location-card p {
+  margin: 5px 0;
+  color: #475569;
+  font-size: 12px;
+}
+
+.location-card small {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.sub-image {
+  height: 300px;
+  margin: 30px 0 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #e2e8f0;
+}
+
+.source-notice {
+  margin-top: 24px;
+  padding: 15px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #2563eb;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.source-notice strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.source-notice p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.culture-footer {
   padding: 17px 26px;
   border-top: 1px solid #e5e7eb;
   display: flex;
@@ -747,7 +788,7 @@ const confirmPassword = () => {
   color: #e11d48;
 }
 
-.comment-count {
+.culture-footer > span {
   color: #64748b;
   display: inline-flex;
   align-items: center;
@@ -853,6 +894,13 @@ const confirmPassword = () => {
 .comment-avatar {
   width: 30px;
   height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .comment-main {
@@ -945,168 +993,42 @@ const confirmPassword = () => {
   cursor: pointer;
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.42);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.password-modal {
-  position: relative;
-  width: 100%;
-  max-width: 390px;
-  padding: 30px;
-  border-radius: 20px;
-  background: #ffffff;
-  text-align: center;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
-}
-
-.modal-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.modal-icon {
-  width: 50px;
-  height: 50px;
-  margin: 0 auto 14px;
-  border-radius: 16px;
-  background: #eff6ff;
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.password-modal h2 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 20px;
-}
-
-.password-modal p {
-  margin: 12px 0 18px;
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.password-modal input {
-  width: 100%;
-  height: 44px;
-  padding: 0 13px;
-  border: 1px solid #dbe2ea;
-  border-radius: 12px;
-  outline: 0;
-  font: inherit;
-}
-
-.password-modal input:focus {
-  border-color: #2563eb;
-}
-
-.password-error {
-  display: block;
-  margin-top: 8px;
-  color: #dc2626;
-  font-size: 11px;
-  text-align: left;
-}
-
-.modal-actions {
-  margin-top: 18px;
-  display: flex;
-  gap: 9px;
-}
-
-.modal-actions button {
-  height: 41px;
-  border-radius: 12px;
-  flex: 1;
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.modal-cancel {
-  border: 1px solid #dbe2ea;
-  background: #ffffff;
-  color: #475569;
-}
-
-.modal-confirm {
-  border: 0;
-  background: #2563eb;
-  color: #ffffff;
-}
-
-.password-modal small {
-  display: block;
-  margin-top: 12px;
-  color: #94a3b8;
-  font-size: 10px;
-}
-
 @media (max-width: 640px) {
   .detail-container {
     padding: 25px 16px 56px;
   }
 
-  .post-header,
-  .post-content,
-  .post-footer,
+  .culture-header,
+  .culture-body,
+  .culture-footer,
   .comment-section {
     padding-left: 18px;
     padding-right: 18px;
   }
 
-  .post-header h1 {
+  .culture-header h1 {
     font-size: 22px;
   }
 
-  .post-info-row {
+  .main-image {
+    height: 260px;
+  }
+
+  .sub-image {
+    height: 220px;
+  }
+
+  .information-item {
+    grid-template-columns: 82px 1fr;
+  }
+
+  .location-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .post-actions {
-    width: 100%;
-  }
-
-  .action-button {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .post-content {
-    min-height: 230px;
-    font-size: 13px;
-  }
-
-  .comment-card {
-    padding: 15px;
-  }
-
-  .comment-form-bottom {
-    align-items: flex-end;
+  .location-heading button {
+    align-self: flex-end;
   }
 }
 </style>
