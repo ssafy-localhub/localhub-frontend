@@ -80,57 +80,43 @@ const comments = ref([
   {
     comment_id: 1,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: "산책로가 넓고 자전거 타기 좋아요. 해질 무렵 풍경도 예쁩니다 😊",
-    like_count: 12,
     created_at: "2026-07-13T15:10:00",
   },
   {
     comment_id: 2,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: "주말에는 사람이 많지만 주차 공간은 생각보다 넉넉했어요.",
-    like_count: 8,
     created_at: "2026-07-13T16:20:00",
   },
   {
     comment_id: 3,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: "아이들과 공놀이하기 좋은 장소인지 궁금합니다.",
-    like_count: 3,
     created_at: "2026-07-14T09:05:00",
   },
   {
     comment_id: 4,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: "잔디광장이 넓어서 가족 단위로 방문하기 괜찮았습니다.",
-    like_count: 5,
     created_at: "2026-07-14T09:40:00",
   },
   {
     comment_id: 5,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: "행사 있는 날에는 주변 도로가 조금 붐빌 수 있어요.",
-    like_count: 7,
     created_at: "2026-07-14T10:15:00",
   },
   {
     comment_id: 6,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: "자전거 코스가 잘 연결돼 있어서 다시 가고 싶어요.",
-    like_count: 4,
     created_at: "2026-07-14T11:00:00",
   },
   {
     comment_id: 7,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: "공원 근처 편의시설 정보도 추가되면 좋겠습니다.",
-    like_count: 6,
     created_at: "2026-07-14T11:30:00",
   },
 ]);
@@ -191,9 +177,7 @@ const submitComment = () => {
   comments.value.unshift({
     comment_id: nextId,
     culture_content_id: culture.value.contentid,
-    author: "익명",
     content: trimmedText,
-    like_count: 0,
     created_at: new Date().toISOString(),
   });
 
@@ -207,9 +191,6 @@ const toggleCultureLike = () => {
   culture.value.like_count += likedCulture.value ? 1 : -1;
 };
 
-const likeComment = (comment) => {
-  comment.like_count += 1;
-};
 
 const goToCommentPage = (pageNumber) => {
   if (
@@ -245,12 +226,10 @@ const openMap = () => {
 
       <article class="culture-card">
         <header class="culture-header">
-          <span
-            :class="[
-              'category-tag',
-              `category-${culture.category}`,
-            ]"
-          >
+          <span :class="[
+            'category-tag',
+            `category-${culture.category}`,
+          ]">
             # {{ culture.category_label }}
           </span>
 
@@ -284,10 +263,7 @@ const openMap = () => {
 
         <section class="culture-body">
           <div class="overview">
-            <p
-              v-for="(paragraph, index) in culture.overview"
-              :key="index"
-            >
+            <p v-for="(paragraph, index) in culture.overview" :key="index">
               {{ paragraph }}
             </p>
           </div>
@@ -296,11 +272,7 @@ const openMap = () => {
             <h2>상세 정보</h2>
 
             <dl class="information-grid">
-              <div
-                v-for="item in culture.info_items"
-                :key="item.label"
-                class="information-item"
-              >
+              <div v-for="item in culture.info_items" :key="item.label" class="information-item">
                 <dt>{{ item.label }}</dt>
                 <dd>{{ item.value }}</dd>
               </div>
@@ -348,15 +320,8 @@ const openMap = () => {
         </section>
 
         <footer class="culture-footer">
-          <button
-            type="button"
-            :class="['like-button', { active: likedCulture }]"
-            @click="toggleCultureLike"
-          >
-            <Heart
-              :size="18"
-              :fill="likedCulture ? 'currentColor' : 'none'"
-            />
+          <button type="button" :class="['like-button', { active: likedCulture }]" @click="toggleCultureLike">
+            <Heart :size="18" :fill="likedCulture ? 'currentColor' : 'none'" />
             {{ formatNumber(culture.like_count) }}
           </button>
 
@@ -373,24 +338,14 @@ const openMap = () => {
           댓글 {{ comments.length }}개
         </h2>
 
-        <form
-          class="comment-form"
-          @submit.prevent="submitComment"
-        >
-          <textarea
-            v-model="commentText"
-            maxlength="500"
-            placeholder="이 장소에 대한 방문 후기나 유용한 정보를 남겨주세요 💙"
-            aria-label="댓글 내용"
-          ></textarea>
+        <form class="comment-form" @submit.prevent="submitComment">
+          <textarea v-model="commentText" maxlength="500" placeholder="이 장소에 대한 방문 후기나 유용한 정보를 남겨주세요 💙"
+            aria-label="댓글 내용"></textarea>
 
           <div class="comment-form-bottom">
             <span>익명으로 작성됩니다</span>
 
-            <button
-              type="submit"
-              :disabled="!commentText.trim()"
-            >
+            <button type="submit" :disabled="!commentText.trim()">
               <Send :size="16" />
               등록
             </button>
@@ -398,75 +353,41 @@ const openMap = () => {
         </form>
 
         <div class="comment-list">
-          <article
-            v-for="comment in paginatedComments"
-            :key="comment.comment_id"
-            class="comment-card"
-          >
+          <article v-for="comment in paginatedComments" :key="comment.comment_id" class="comment-card">
             <span class="comment-avatar">
               <UserRound :size="15" />
             </span>
 
             <div class="comment-main">
               <div class="comment-header">
-                <strong>{{ comment.author }}</strong>
+                <strong>익명</strong>
                 <time>{{ formatDate(comment.created_at) }}</time>
               </div>
 
               <p>{{ comment.content }}</p>
-
-              <button
-                type="button"
-                class="comment-like"
-                @click="likeComment(comment)"
-              >
-                <Heart :size="14" />
-                {{ comment.like_count }}
-              </button>
             </div>
           </article>
         </div>
 
-        <nav
-          v-if="totalCommentPages > 1"
-          class="comment-pagination"
-          aria-label="댓글 페이지 이동"
-        >
-          <button
-            type="button"
-            :disabled="currentCommentPage === 1"
-            aria-label="이전 댓글 페이지"
-            @click="goToCommentPage(currentCommentPage - 1)"
-          >
+        <nav v-if="totalCommentPages > 1" class="comment-pagination" aria-label="댓글 페이지 이동">
+          <button type="button" :disabled="currentCommentPage === 1" aria-label="이전 댓글 페이지"
+            @click="goToCommentPage(currentCommentPage - 1)">
             <ChevronLeft :size="17" />
           </button>
 
-          <button
-            v-for="pageNumber in commentPageNumbers"
-            :key="pageNumber"
-            type="button"
-            :class="{ active: currentCommentPage === pageNumber }"
-            @click="goToCommentPage(pageNumber)"
-          >
+          <button v-for="pageNumber in commentPageNumbers" :key="pageNumber" type="button"
+            :class="{ active: currentCommentPage === pageNumber }" @click="goToCommentPage(pageNumber)">
             {{ pageNumber }}
           </button>
 
-          <button
-            type="button"
-            :disabled="currentCommentPage === totalCommentPages"
-            aria-label="다음 댓글 페이지"
-            @click="goToCommentPage(currentCommentPage + 1)"
-          >
+          <button type="button" :disabled="currentCommentPage === totalCommentPages" aria-label="다음 댓글 페이지"
+            @click="goToCommentPage(currentCommentPage + 1)">
             <ChevronRight :size="17" />
           </button>
         </nav>
       </section>
 
-      <button
-        type="button"
-        class="back-button"
-        @click="goBackToList"
-      >
+      <button type="button" class="back-button" @click="goBackToList">
         <ArrowLeft :size="17" />
         목록으로
       </button>
@@ -788,7 +709,7 @@ const openMap = () => {
   color: #e11d48;
 }
 
-.culture-footer > span {
+.culture-footer>span {
   color: #64748b;
   display: inline-flex;
   align-items: center;
@@ -931,17 +852,6 @@ const openMap = () => {
   line-height: 1.65;
 }
 
-.comment-like {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #64748b;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  cursor: pointer;
-}
 
 .comment-pagination {
   margin-top: 21px;

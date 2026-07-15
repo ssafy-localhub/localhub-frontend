@@ -63,57 +63,43 @@ const comments = ref([
   {
     comment_id: 1,
     content_id: 1,
-    author: "익명",
     content: "정말 유용한 정보 감사해요! 주말에 꼭 가봐야겠네요 😊",
-    like_count: 12,
     created_at: "2026-07-13T15:10:00",
   },
   {
     comment_id: 2,
     content_id: 1,
-    author: "익명",
     content: "저도 다녀왔는데 완전 동의합니다. 특히 말씀하신 부분이 최고였어요!",
-    like_count: 8,
     created_at: "2026-07-13T16:20:00",
   },
   {
     comment_id: 3,
     content_id: 1,
-    author: "익명",
     content: "혹시 주차 공간은 넉넉한가요? 차 가져가려고요.",
-    like_count: 3,
     created_at: "2026-07-14T09:05:00",
   },
   {
     comment_id: 4,
     content_id: 1,
-    author: "익명",
     content: "주차는 제 경험상 평일엔 괜찮았어요. 주말엔 좀 붐빌 수 있어요!",
-    like_count: 5,
     created_at: "2026-07-14T09:40:00",
   },
   {
     comment_id: 5,
     content_id: 1,
-    author: "익명",
     content: "좋은 정보 감사합니다 북마크 해뒀어요 ✨",
-    like_count: 7,
     created_at: "2026-07-14T10:15:00",
   },
   {
     comment_id: 6,
     content_id: 1,
-    author: "익명",
     content: "가격 정보까지 있어서 도움이 됐습니다.",
-    like_count: 4,
     created_at: "2026-07-14T11:00:00",
   },
   {
     comment_id: 7,
     content_id: 1,
-    author: "익명",
     content: "다음에는 다른 메뉴도 소개해주세요!",
-    like_count: 6,
     created_at: "2026-07-14T11:30:00",
   },
 ]);
@@ -175,12 +161,11 @@ const submitComment = () => {
   const nextId =
     Math.max(0, ...comments.value.map((comment) => comment.comment_id)) + 1;
 
+
   comments.value.unshift({
     comment_id: nextId,
     content_id: post.value.content_id,
-    author: "익명",
     content: trimmedText,
-    like_count: 0,
     created_at: new Date().toISOString(),
   });
 
@@ -189,9 +174,7 @@ const submitComment = () => {
   currentCommentPage.value = 1;
 };
 
-const likeComment = (comment) => {
-  comment.like_count += 1;
-};
+
 
 const goToCommentPage = (pageNumber) => {
   if (
@@ -270,12 +253,10 @@ const confirmPassword = () => {
 
       <article class="post-card">
         <header class="post-header">
-          <span
-            :class="[
-              'category-tag',
-              `category-${post.category}`,
-            ]"
-          >
+          <span :class="[
+            'category-tag',
+            `category-${post.category}`,
+          ]">
             # {{ categoryLabel }}
           </span>
 
@@ -300,20 +281,12 @@ const confirmPassword = () => {
             </div>
 
             <div class="post-actions">
-              <button
-                type="button"
-                class="action-button"
-                @click="openPasswordModal('edit')"
-              >
+              <button type="button" class="action-button" @click="openPasswordModal('edit')">
                 <Pencil :size="15" />
                 수정
               </button>
 
-              <button
-                type="button"
-                class="action-button delete"
-                @click="openPasswordModal('delete')"
-              >
+              <button type="button" class="action-button delete" @click="openPasswordModal('delete')">
                 <Trash2 :size="15" />
                 삭제
               </button>
@@ -322,24 +295,14 @@ const confirmPassword = () => {
         </header>
 
         <section class="post-content">
-          <p
-            v-for="(paragraph, index) in post.content"
-            :key="index"
-          >
+          <p v-for="(paragraph, index) in post.content" :key="index">
             {{ paragraph }}
           </p>
         </section>
 
         <footer class="post-footer">
-          <button
-            type="button"
-            :class="['like-button', { active: likedPost }]"
-            @click="togglePostLike"
-          >
-            <Heart
-              :size="18"
-              :fill="likedPost ? 'currentColor' : 'none'"
-            />
+          <button type="button" :class="['like-button', { active: likedPost }]" @click="togglePostLike">
+            <Heart :size="18" :fill="likedPost ? 'currentColor' : 'none'" />
             {{ formatNumber(post.like_count) }}
           </button>
 
@@ -356,24 +319,14 @@ const confirmPassword = () => {
           댓글 {{ comments.length }}개
         </h2>
 
-        <form
-          class="comment-form"
-          @submit.prevent="submitComment"
-        >
-          <textarea
-            v-model="commentText"
-            maxlength="500"
-            placeholder="댓글을 입력해주세요. 서로를 존중하는 댓글 문화를 만들어요 💙"
-            aria-label="댓글 내용"
-          ></textarea>
+        <form class="comment-form" @submit.prevent="submitComment">
+          <textarea v-model="commentText" maxlength="500" placeholder="댓글을 입력해주세요. 서로를 존중하는 댓글 문화를 만들어요 💙"
+            aria-label="댓글 내용"></textarea>
 
           <div class="comment-form-bottom">
             <span>익명으로 작성됩니다</span>
 
-            <button
-              type="submit"
-              :disabled="!commentText.trim()"
-            >
+            <button type="submit" :disabled="!commentText.trim()">
               <Send :size="16" />
               등록
             </button>
@@ -381,99 +334,49 @@ const confirmPassword = () => {
         </form>
 
         <div class="comment-list">
-          <article
-            v-for="comment in paginatedComments"
-            :key="comment.comment_id"
-            class="comment-card"
-          >
+          <article v-for="comment in paginatedComments" :key="comment.comment_id" class="comment-card">
             <span class="comment-avatar">
               <UserRound :size="15" />
             </span>
 
             <div class="comment-main">
               <div class="comment-header">
-                <strong>{{ comment.author }}</strong>
+                <strong>익명</strong>
                 <time>{{ formatDate(comment.created_at) }}</time>
               </div>
 
               <p>{{ comment.content }}</p>
-
-              <button
-                type="button"
-                class="comment-like"
-                @click="likeComment(comment)"
-              >
-                <Heart :size="14" />
-                {{ comment.like_count }}
-              </button>
             </div>
           </article>
         </div>
 
-        <nav
-          v-if="totalCommentPages > 1"
-          class="comment-pagination"
-          aria-label="댓글 페이지 이동"
-        >
-          <button
-            type="button"
-            :disabled="currentCommentPage === 1"
-            aria-label="이전 댓글 페이지"
-            @click="goToCommentPage(currentCommentPage - 1)"
-          >
+        <nav v-if="totalCommentPages > 1" class="comment-pagination" aria-label="댓글 페이지 이동">
+          <button type="button" :disabled="currentCommentPage === 1" aria-label="이전 댓글 페이지"
+            @click="goToCommentPage(currentCommentPage - 1)">
             <ChevronLeft :size="17" />
           </button>
 
-          <button
-            v-for="pageNumber in commentPageNumbers"
-            :key="pageNumber"
-            type="button"
-            :class="{ active: currentCommentPage === pageNumber }"
-            @click="goToCommentPage(pageNumber)"
-          >
+          <button v-for="pageNumber in commentPageNumbers" :key="pageNumber" type="button"
+            :class="{ active: currentCommentPage === pageNumber }" @click="goToCommentPage(pageNumber)">
             {{ pageNumber }}
           </button>
 
-          <button
-            type="button"
-            :disabled="
-              currentCommentPage === totalCommentPages
-            "
-            aria-label="다음 댓글 페이지"
-            @click="goToCommentPage(currentCommentPage + 1)"
-          >
+          <button type="button" :disabled="currentCommentPage === totalCommentPages
+            " aria-label="다음 댓글 페이지" @click="goToCommentPage(currentCommentPage + 1)">
             <ChevronRight :size="17" />
           </button>
         </nav>
       </section>
 
-      <button
-        type="button"
-        class="back-button"
-        @click="goBackToList"
-      >
+      <button type="button" class="back-button" @click="goBackToList">
         <ArrowLeft :size="17" />
         목록으로
       </button>
     </div>
 
-    <div
-      v-if="isPasswordModalOpen"
-      class="modal-backdrop"
-      @click.self="closePasswordModal"
-    >
-      <section
-        class="password-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="password-modal-title"
-      >
-        <button
-          type="button"
-          class="modal-close"
-          aria-label="닫기"
-          @click="closePasswordModal"
-        >
+    <div v-if="isPasswordModalOpen" class="modal-backdrop" @click.self="closePasswordModal">
+      <section class="password-modal" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
+        <button type="button" class="modal-close" aria-label="닫기" @click="closePasswordModal">
           <X :size="19" />
         </button>
 
@@ -487,31 +390,18 @@ const confirmPassword = () => {
           위해 작성 시 입력한 비밀번호를 입력해주세요.
         </p>
 
-        <input
-          v-model="passwordInput"
-          type="password"
-          placeholder="비밀번호 입력"
-          @keyup.enter="confirmPassword"
-        />
+        <input v-model="passwordInput" type="password" placeholder="비밀번호 입력" @keyup.enter="confirmPassword" />
 
         <span v-if="passwordError" class="password-error">
           {{ passwordError }}
         </span>
 
         <div class="modal-actions">
-          <button
-            type="button"
-            class="modal-cancel"
-            @click="closePasswordModal"
-          >
+          <button type="button" class="modal-cancel" @click="closePasswordModal">
             취소
           </button>
 
-          <button
-            type="button"
-            class="modal-confirm"
-            @click="confirmPassword"
-          >
+          <button type="button" class="modal-confirm" @click="confirmPassword">
             확인
           </button>
         </div>
