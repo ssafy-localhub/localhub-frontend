@@ -37,7 +37,7 @@ const routes = [
     props: true,
   },
   {
-    path: "/community/:category/:id",
+    path: "/community/post/:id",
     name: "community-detail",
     component: CommunityDetailView,
     props: true,

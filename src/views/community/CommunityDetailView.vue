@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   ChevronRight,
@@ -16,6 +16,7 @@ import {
   X,
   LockKeyhole,
 } from "lucide-vue-next";
+import { getPostDetail, getPostComment } from "@/api/community.js"; // API 임포트
 
 const props = defineProps({
   category: {
@@ -39,70 +40,13 @@ const categoryLabels = {
   festival: "축제",
   life: "생활",
   question: "질문",
+  living: "생활"
 };
 
-const post = ref({
-  content_id: Number(props.id || route.params.id || 1),
-  category: props.category || route.params.category || "restaurant",
-  title: "구미 인동 신규 라멘집 발견 🍜 강추합니다",
-  content: [
-    "인동 CGV 근처에 최근 오픈한 '멘야 하루카제'라는 라멘집을 다녀왔어요.",
-    "육수가 진하고 깔끔한데 느끼하지 않고, 면발도 탱탱해서 정말 맛있더라고요. 차슈가 두툼하게 올라가 있고 반숙 계란도 잘 절여져 있어요.",
-    "웨이팅이 평일 점심엔 30분, 주말엔 1시간 넘게 걸리는데 충분히 기다릴 가치가 있습니다. 가격은 기본 쇼유라멘 9,500원, 특제 라멘 12,000원이에요.",
-    "주차는 바로 옆 CGV 주차장 이용하시면 됩니다. 꼭 한 번 가보세요!",
-  ],
-  author: "익명",
-  views: 847,
-  like_count: 124,
-  comment_count: 7,
-  created_at: "2026-07-13T14:10:00",
-  password: "1234",
-});
-
-const comments = ref([
-  {
-    comment_id: 1,
-    content_id: 1,
-    content: "정말 유용한 정보 감사해요! 주말에 꼭 가봐야겠네요 😊",
-    created_at: "2026-07-13T15:10:00",
-  },
-  {
-    comment_id: 2,
-    content_id: 1,
-    content: "저도 다녀왔는데 완전 동의합니다. 특히 말씀하신 부분이 최고였어요!",
-    created_at: "2026-07-13T16:20:00",
-  },
-  {
-    comment_id: 3,
-    content_id: 1,
-    content: "혹시 주차 공간은 넉넉한가요? 차 가져가려고요.",
-    created_at: "2026-07-14T09:05:00",
-  },
-  {
-    comment_id: 4,
-    content_id: 1,
-    content: "주차는 제 경험상 평일엔 괜찮았어요. 주말엔 좀 붐빌 수 있어요!",
-    created_at: "2026-07-14T09:40:00",
-  },
-  {
-    comment_id: 5,
-    content_id: 1,
-    content: "좋은 정보 감사합니다 북마크 해뒀어요 ✨",
-    created_at: "2026-07-14T10:15:00",
-  },
-  {
-    comment_id: 6,
-    content_id: 1,
-    content: "가격 정보까지 있어서 도움이 됐습니다.",
-    created_at: "2026-07-14T11:00:00",
-  },
-  {
-    comment_id: 7,
-    content_id: 1,
-    content: "다음에는 다른 메뉴도 소개해주세요!",
-    created_at: "2026-07-14T11:30:00",
-  },
-]);
+// API 연동을 위한 상태 관리
+const post = ref(null);
+const comments = ref([]);
+const isLoading = ref(true);
 
 const commentText = ref("");
 const currentCommentPage = ref(1);
@@ -112,8 +56,36 @@ const passwordAction = ref("");
 const passwordInput = ref("");
 const passwordError = ref("");
 
+// 파라미터에서 ID 추출
+const postId = computed(() => props.id || route.params.id);
+
+// 데이터 가져오기 함수
+const fetchPostData = async () => {
+  if (!postId.value) return;
+  
+  try {
+    isLoading.value = true;
+    // 두 API를 병렬로 호출하여 성능 최적화
+    const [postData, commentsData] = await Promise.all([
+      getPostDetail(postId.value),
+      getPostComment(postId.value)
+    ]);
+    
+    post.value = postData;
+    comments.value = commentsData;
+  } catch (error) {
+    console.error("데이터를 불러오는 중 오류가 발생했습니다:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchPostData();
+});
+
 const categoryLabel = computed(
-  () => categoryLabels[post.value.category] || "커뮤니티",
+  () => post.value ? (categoryLabels[post.value.category] || "커뮤니티") : "커뮤니티",
 );
 
 const totalCommentPages = computed(() =>
@@ -141,6 +113,7 @@ const formatDate = (dateTime) => {
 };
 
 const formatNumber = (value) => {
+  if (value === undefined || value === null) return 0;
   if (value >= 1000) {
     const converted = value / 1000;
     return `${Number.isInteger(converted) ? converted : converted.toFixed(1)}K`;
@@ -150,17 +123,17 @@ const formatNumber = (value) => {
 };
 
 const togglePostLike = () => {
+  if (!post.value) return;
   likedPost.value = !likedPost.value;
   post.value.like_count += likedPost.value ? 1 : -1;
 };
 
 const submitComment = () => {
   const trimmedText = commentText.value.trim();
-  if (!trimmedText) return;
+  if (!trimmedText || !post.value) return;
 
   const nextId =
     Math.max(0, ...comments.value.map((comment) => comment.comment_id)) + 1;
-
 
   comments.value.unshift({
     comment_id: nextId,
@@ -174,8 +147,6 @@ const submitComment = () => {
   currentCommentPage.value = 1;
 };
 
-
-
 const goToCommentPage = (pageNumber) => {
   if (
     pageNumber < 1 ||
@@ -188,14 +159,15 @@ const goToCommentPage = (pageNumber) => {
 };
 
 const goBackToList = () => {
+  const category = post.value?.category || props.category || route.params.category;
   router.push({
     name:
-      post.value.category && post.value.category !== "all"
+      category && category !== "all"
         ? "community-category"
         : "community",
     params:
-      post.value.category && post.value.category !== "all"
-        ? { category: post.value.category }
+      category && category !== "all"
+        ? { category }
         : {},
   });
 };
@@ -214,6 +186,7 @@ const closePasswordModal = () => {
 };
 
 const confirmPassword = () => {
+  if (!post.value) return;
   if (passwordInput.value !== post.value.password) {
     passwordError.value = "비밀번호가 일치하지 않습니다.";
     return;
@@ -223,7 +196,7 @@ const confirmPassword = () => {
     closePasswordModal();
     router.push({
       name: "community-edit",
-      params: { id: post.value.content_id },
+      params: { id: post.value.content_id || postId.value },
       query: { category: post.value.category },
     });
     return;
@@ -243,137 +216,160 @@ const confirmPassword = () => {
 <template>
   <main class="detail-page">
     <div class="detail-container">
-      <nav class="breadcrumb" aria-label="현재 위치">
-        <RouterLink to="/">홈</RouterLink>
-        <ChevronRight :size="15" />
-        <RouterLink to="/community">커뮤니티</RouterLink>
-        <ChevronRight :size="15" />
-        <span>{{ post.title }}</span>
-      </nav>
+      <!-- 로딩 중 화면 표시 -->
+      <div v-if="isLoading" class="loading-state">
+        <p>게시글을 불러오는 중입니다...</p>
+      </div>
 
-      <article class="post-card">
-        <header class="post-header">
-          <span :class="[
-            'category-tag',
-            `category-${post.category}`,
-          ]">
-            # {{ categoryLabel }}
-          </span>
+      <template v-else-if="post">
+        <nav class="breadcrumb" aria-label="현재 위치">
+          <RouterLink to="/">홈</RouterLink>
+          <ChevronRight :size="15" />
+          <RouterLink to="/community">커뮤니티</RouterLink>
+          <ChevronRight :size="15" />
+          <span>{{ post.title }}</span>
+        </nav>
 
-          <h1>{{ post.title }}</h1>
-
-          <div class="post-info-row">
-            <div class="post-meta">
-              <span class="author-avatar">
-                <UserRound :size="15" />
-              </span>
-              <strong>{{ post.author }}</strong>
-
-              <span>
-                <Clock3 :size="15" />
-                {{ formatDate(post.created_at) }}
-              </span>
-
-              <span>
-                <Eye :size="15" />
-                {{ formatNumber(post.views) }}
-              </span>
-            </div>
-
-            <div class="post-actions">
-              <button type="button" class="action-button" @click="openPasswordModal('edit')">
-                <Pencil :size="15" />
-                수정
-              </button>
-
-              <button type="button" class="action-button delete" @click="openPasswordModal('delete')">
-                <Trash2 :size="15" />
-                삭제
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <section class="post-content">
-          <p v-for="(paragraph, index) in post.content" :key="index">
-            {{ paragraph }}
-          </p>
-        </section>
-
-        <footer class="post-footer">
-          <button type="button" :class="['like-button', { active: likedPost }]" @click="togglePostLike">
-            <Heart :size="18" :fill="likedPost ? 'currentColor' : 'none'" />
-            {{ formatNumber(post.like_count) }}
-          </button>
-
-          <span class="comment-count">
-            <MessageSquare :size="17" />
-            댓글 {{ comments.length }}
-          </span>
-        </footer>
-      </article>
-
-      <section class="comment-section">
-        <h2>
-          <MessageSquare :size="18" />
-          댓글 {{ comments.length }}개
-        </h2>
-
-        <form class="comment-form" @submit.prevent="submitComment">
-          <textarea v-model="commentText" maxlength="500" placeholder="댓글을 입력해주세요. 서로를 존중하는 댓글 문화를 만들어요 💙"
-            aria-label="댓글 내용"></textarea>
-
-          <div class="comment-form-bottom">
-            <span>익명으로 작성됩니다</span>
-
-            <button type="submit" :disabled="!commentText.trim()">
-              <Send :size="16" />
-              등록
-            </button>
-          </div>
-        </form>
-
-        <div class="comment-list">
-          <article v-for="comment in paginatedComments" :key="comment.comment_id" class="comment-card">
-            <span class="comment-avatar">
-              <UserRound :size="15" />
+        <article class="post-card">
+          <header class="post-header">
+            <span :class="[
+              'category-tag',
+              `category-${post.category}`,
+            ]">
+              # {{ categoryLabel }}
             </span>
 
-            <div class="comment-main">
-              <div class="comment-header">
-                <strong>익명</strong>
-                <time>{{ formatDate(comment.created_at) }}</time>
+            <h1>{{ post.title }}</h1>
+
+            <div class="post-info-row">
+              <div class="post-meta">
+                <span class="author-avatar">
+                  <UserRound :size="15" />
+                </span>
+                <strong>{{ post.author }}</strong>
+
+                <span>
+                  <Clock3 :size="15" />
+                  {{ formatDate(post.created_at) }}
+                </span>
+
+                <span>
+                  <Eye :size="15" />
+                  {{ formatNumber(post.views) }}
+                </span>
               </div>
 
-              <p>{{ comment.content }}</p>
+              <div class="post-actions">
+                <button type="button" class="action-button" @click="openPasswordModal('edit')">
+                  <Pencil :size="15" />
+                  수정
+                </button>
+
+                <button type="button" class="action-button delete" @click="openPasswordModal('delete')">
+                  <Trash2 :size="15" />
+                  삭제
+                </button>
+              </div>
             </div>
-          </article>
-        </div>
+          </header>
 
-        <nav v-if="totalCommentPages > 1" class="comment-pagination" aria-label="댓글 페이지 이동">
-          <button type="button" :disabled="currentCommentPage === 1" aria-label="이전 댓글 페이지"
-            @click="goToCommentPage(currentCommentPage - 1)">
-            <ChevronLeft :size="17" />
-          </button>
+          <section class="post-content">
+            <!-- content가 배열인 경우와 일반 문자열인 경우 모두 호환되도록 처리 -->
+            <template v-if="Array.isArray(post.content)">
+              <p v-for="(paragraph, index) in post.content" :key="index">
+                {{ paragraph }}
+              </p>
+            </template>
+            <template v-else>
+              <p>{{ post.content }}</p>
+            </template>
+          </section>
 
-          <button v-for="pageNumber in commentPageNumbers" :key="pageNumber" type="button"
-            :class="{ active: currentCommentPage === pageNumber }" @click="goToCommentPage(pageNumber)">
-            {{ pageNumber }}
-          </button>
+          <footer class="post-footer">
+            <button type="button" :class="['like-button', { active: likedPost }]" @click="togglePostLike">
+              <Heart :size="18" :fill="likedPost ? 'currentColor' : 'none'" />
+              {{ formatNumber(post.like_count) }}
+            </button>
 
-          <button type="button" :disabled="currentCommentPage === totalCommentPages
-            " aria-label="다음 댓글 페이지" @click="goToCommentPage(currentCommentPage + 1)">
-            <ChevronRight :size="17" />
-          </button>
-        </nav>
-      </section>
+            <span class="comment-count">
+              <MessageSquare :size="17" />
+              댓글 {{ comments.length }}
+            </span>
+          </footer>
+        </article>
 
-      <button type="button" class="back-button" @click="goBackToList">
-        <ArrowLeft :size="17" />
-        목록으로
-      </button>
+        <section class="comment-section">
+          <h2>
+            <MessageSquare :size="18" />
+            댓글 {{ comments.length }}개
+          </h2>
+
+          <form class="comment-form" @submit.prevent="submitComment">
+            <textarea v-model="commentText" maxlength="500" placeholder="댓글을 입력해주세요. 서로를 존중하는 댓글 문화를 만들어요 💙"
+              aria-label="댓글 내용"></textarea>
+
+            <div class="comment-form-bottom">
+              <span>익명으로 작성됩니다</span>
+
+              <button type="submit" :disabled="!commentText.trim()">
+                <Send :size="16" />
+                등록
+              </button>
+            </div>
+          </form>
+
+          <div class="comment-list">
+            <article v-for="comment in paginatedComments" :key="comment.comment_id" class="comment-card">
+              <span class="comment-avatar">
+                <UserRound :size="15" />
+              </span>
+
+              <div class="comment-main">
+                <div class="comment-header">
+                  <strong>익명</strong>
+                  <time>{{ formatDate(comment.created_at) }}</time>
+                </div>
+
+                <p>{{ comment.content }}</p>
+              </div>
+            </article>
+          </div>
+
+          <nav v-if="totalCommentPages > 1" class="comment-pagination" aria-label="댓글 페이지 이동">
+            <button type="button" :disabled="currentCommentPage === 1" aria-label="이전 댓글 페이지"
+              @click="goToCommentPage(currentCommentPage - 1)">
+              <ChevronLeft :size="17" />
+            </button>
+
+            <button v-for="pageNumber in commentPageNumbers" :key="pageNumber" type="button"
+              :class="{ active: currentCommentPage === pageNumber }" @click="goToCommentPage(pageNumber)">
+              {{ pageNumber }}
+            </button>
+
+            <button type="button" :disabled="currentCommentPage === totalCommentPages" aria-label="다음 댓글 페이지" 
+              @click="goToCommentPage(currentCommentPage + 1)">
+              <ChevronRight :size="17" />
+            </button>
+          </nav>
+        </section>
+
+        <button type="button" class="back-button" @click="goBackToList">
+          <ArrowLeft :size="17" />
+          목록으로
+        </button>
+      </template>
+
+      <!-- 데이터를 찾을 수 없는 경우 예외 처리 -->
+      <div v-else class="error-state">
+        <p>존재하지 않거나 삭제된 게시글입니다.</p>
+        <button type="button" class="back-button" @click="goBackToList">
+          <ArrowLeft :size="17" />
+          목록으로 돌아가기
+        </button>
+      </div>
     </div>
 
+    <!-- 비밀번호 모달 영역 -->
     <div v-if="isPasswordModalOpen" class="modal-backdrop" @click.self="closePasswordModal">
       <section class="password-modal" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
         <button type="button" class="modal-close" aria-label="닫기" @click="closePasswordModal">
@@ -406,11 +402,29 @@ const confirmPassword = () => {
           </button>
         </div>
 
-        <small>더미 비밀번호: 1234</small>
+        <small>더미 비밀번호: {{ post?.password || '1234' }}</small>
       </section>
     </div>
   </main>
 </template>
+
+<style scoped>
+/* 기존 스타일과 동일하되 로딩/에러 레이아웃용 추가 */
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 700;
+  gap: 16px;
+}
+
+/* ...기존 스타일 유지... */
+</style>
 
 <style scoped>
 .detail-page {
