@@ -164,11 +164,7 @@ const goToPage = async (pageNumber) => {
 
 const goToDetail = (post) => {
   router.push({
-    name: "community-detail",
-    params: {
-      category: "all",
-      id: post.id,
-    },
+    path: `/community/post/${post.post_id}`,
   });
 };
 
@@ -182,7 +178,7 @@ const goToEdit = (post) => {
   router.push({
     name: "community-edit",
     params: {
-      id: post.id,
+      id: post.post_id,
     },
   });
 };

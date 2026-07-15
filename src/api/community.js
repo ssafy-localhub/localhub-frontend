@@ -14,16 +14,6 @@ export async function getPosts({page = 1, size = 5, filter = "", search = "",} =
   return response.data;
 }
 
-export async function getPostDetail(postId) {
-  if (!postId) {
-    throw new Error("게시글 ID가 필요합니다.");
-  }
-
-  const response = await api.get(`/posts/${postId}`);
-
-  return response.data;
-}
-
 export async function createPost({ title, content, tag = null, category = null, password,}) {
   const payload = {
     title,
@@ -100,21 +90,6 @@ export async function likePost(postId) {
   );
 
   return response.status;
-}
-
-export async function createComment(postId, content) {
-  if (!postId) {
-    throw new Error("게시글 ID가 필요합니다.");
-  }
-
-  const response = await api.post(
-    `/posts/${postId}/comments/`,
-    {
-      content,
-    },
-  );
-
-  return response.data;
 }
 
 /**
