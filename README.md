@@ -23,6 +23,7 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 
 ```sh
 npm install
+npm install lucide-vue-next
 ```
 
 ### Compile and Hot-Reload for Development
