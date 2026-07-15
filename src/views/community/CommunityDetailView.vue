@@ -16,7 +16,9 @@ import {
   X,
   LockKeyhole,
 } from "lucide-vue-next";
-import { getPostDetail, getPostComment } from "@/api/community.js"; // API 임포트
+import { getPostDetail, getPostComment, createComment } from "@/api/community.js";
+
+const commentAuthor = ref("");
 
 const props = defineProps({
   category: {
@@ -128,23 +130,27 @@ const togglePostLike = () => {
   post.value.like_count += likedPost.value ? 1 : -1;
 };
 
-const submitComment = () => {
+const submitComment = async() => {
   const trimmedText = commentText.value.trim();
   if (!trimmedText || !post.value) return;
+  
+  try {
+    const newComment = await createComment(postId.value, {
+      comment_content: trimmedText,
+      comment_author: commentAuthor.value.trim()
+    });
 
-  const nextId =
-    Math.max(0, ...comments.value.map((comment) => comment.comment_id)) + 1;
+    comments.value.unshift(newComment);
+    
+    post.value.comment_count = comments.value.length;
+    commentText.value = "";
+    commentAuthor.value = "";
+    currentCommentPage.value = 1; // 댓글이 작성되면 첫 페이지로 이동
+  } catch (error) {
+    console.error("댓글 등록에 실패했습니다:", error);
+    window.alert("댓글 등록에 실패했습니다. 다시 시도해 주세요.");
+  }
 
-  comments.value.unshift({
-    comment_id: nextId,
-    content_id: post.value.content_id,
-    content: trimmedText,
-    created_at: new Date().toISOString(),
-  });
-
-  post.value.comment_count = comments.value.length;
-  commentText.value = "";
-  currentCommentPage.value = 1;
 };
 
 const goToCommentPage = (pageNumber) => {
@@ -305,6 +311,14 @@ const confirmPassword = () => {
           </h2>
 
           <form class="comment-form" @submit.prevent="submitComment">
+            <div class="comment-author-input">
+              <input 
+                v-model="commentAuthor" 
+                type="text" 
+                placeholder="닉네임 (미입력 시 익명)" 
+                maxlength="10"
+              />
+            </div>
             <textarea v-model="commentText" maxlength="500" placeholder="댓글을 입력해주세요. 서로를 존중하는 댓글 문화를 만들어요 💙"
               aria-label="댓글 내용"></textarea>
 
@@ -326,11 +340,11 @@ const confirmPassword = () => {
 
               <div class="comment-main">
                 <div class="comment-header">
-                  <strong>익명</strong>
+                  <strong>{{comment.comment_author}}</strong>
                   <time>{{ formatDate(comment.created_at) }}</time>
                 </div>
 
-                <p>{{ comment.content }}</p>
+                <p>{{ comment.comment_content }}</p>
               </div>
             </article>
           </div>
@@ -686,7 +700,7 @@ const confirmPassword = () => {
 }
 
 .comment-form textarea {
-  width: 100%;
+  width: 95%;
   min-height: 94px;
   padding: 14px;
   border: 1px solid #dbe2ea;
@@ -969,6 +983,20 @@ const confirmPassword = () => {
   font-size: 10px;
 }
 
+.comment-author-input input {
+  width: 150px;             /* 적절한 입력창 너비 설정 */
+  height: 38px;
+  padding: 0 14px;
+  margin-bottom: 10px;      /* 아래 textarea와의 간격 */
+  border: 1px solid #dbe2ea; /* 기존 textarea와 동일한 테두리 색상 */
+  border-radius: 10px;
+  outline: 0;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 13px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
 @media (max-width: 640px) {
   .detail-container {
     padding: 25px 16px 56px;
@@ -1013,4 +1041,5 @@ const confirmPassword = () => {
     align-items: flex-end;
   }
 }
+
 </style>
