@@ -2,15 +2,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_BASE_URL ||
-    "https://localhub-backend-5263.onrender.com/api",
-
+  baseURL: "https://localhub-backend-5263.onrender.com/api",
   timeout: 60000,
-
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json", },
 });
 
 api.interceptors.response.use(
