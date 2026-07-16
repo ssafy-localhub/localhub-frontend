@@ -66,6 +66,15 @@ const formatDate = (dateTime) => {
     .replaceAll("-", ".");
 };
 
+const getPostId = (post) => {
+  const rawId = post?.post_id ?? post?.id;
+  const resolvedId = Number(rawId);
+
+  return Number.isInteger(resolvedId) && resolvedId > 0
+    ? resolvedId
+    : null;
+};
+
 const buildQuery = () => {
   const query = {};
 
@@ -163,8 +172,15 @@ const goToPage = async (pageNumber) => {
 };
 
 const goToDetail = (post) => {
+  const postId = getPostId(post);
+
+  if (!postId) {
+    console.error("상세 이동에 필요한 게시글 ID가 없습니다.", post);
+    return;
+  }
+
   router.push({
-    path: `/community/post/${post.post_id}`,
+    path: `/community/post/${postId}`,
   });
 };
 
@@ -175,28 +191,41 @@ const goToWrite = () => {
 };
 
 const goToEdit = (post) => {
+  const postId = getPostId(post);
+
+  if (!postId) {
+    console.error("수정에 필요한 게시글 ID가 없습니다.", post);
+    return;
+  }
+
   router.push({
     name: "community-edit",
     params: {
-      id: post.post_id,
+      id: postId,
     },
   });
 };
 
-const stopCardEvent = (event) => {
-  event.stopPropagation();
-};
-
 const openDeleteModal = (post) => {
-  deleteTargetPost.value = post;
+  const postId = getPostId(post);
+
+  if (!postId) {
+    console.error("삭제할 게시글 ID가 없습니다.", post);
+    window.alert("게시글 정보를 확인할 수 없어 삭제할 수 없습니다.");
+    return;
+  }
+
+  deleteTargetPost.value = {
+    ...post,
+    resolvedId: postId,
+  };
+
   deletePassword.value = "";
   deleteErrorMessage.value = "";
   isDeleteModalOpen.value = true;
 };
 
 const closeDeleteModal = () => {
-  if (isDeleting.value) return;
-
   isDeleteModalOpen.value = false;
   deleteTargetPost.value = null;
   deletePassword.value = "";
@@ -204,7 +233,9 @@ const closeDeleteModal = () => {
 };
 
 const confirmDelete = async () => {
-  if (!deleteTargetPost.value || isDeleting.value) return;
+  if (!deleteTargetPost.value || isDeleting.value) {
+    return;
+  }
 
   if (deletePassword.value.length < 4) {
     deleteErrorMessage.value =
@@ -217,13 +248,9 @@ const confirmDelete = async () => {
 
   try {
     await deletePost(
-      deleteTargetPost.value.id,
+      deleteTargetPost.value.resolvedId,
       deletePassword.value,
     );
-
-    window.alert("게시글이 삭제되었습니다.");
-
-    closeDeleteModal();
 
     if (
       posts.value.length === 1 &&
@@ -236,7 +263,14 @@ const confirmDelete = async () => {
       });
     }
 
+    isDeleteModalOpen.value = false;
+    deleteTargetPost.value = null;
+    deletePassword.value = "";
+    deleteErrorMessage.value = "";
+
     await fetchPosts();
+
+    window.alert("게시글이 삭제되었습니다.");
   } catch (error) {
     console.error("게시글 삭제 실패:", error);
 
@@ -248,9 +282,12 @@ const confirmDelete = async () => {
     } else if (status === 404) {
       deleteErrorMessage.value =
         "이미 삭제되었거나 존재하지 않는 게시글입니다.";
+    } else if (error.code === "ECONNABORTED") {
+      deleteErrorMessage.value =
+        "서버 응답 시간이 초과되었습니다. 잠시 후 목록을 확인해주세요.";
     } else if (!error.response) {
       deleteErrorMessage.value =
-        "백엔드 서버에 연결할 수 없습니다.";
+        error.message || "게시글 삭제 중 프론트 오류가 발생했습니다.";
     } else {
       deleteErrorMessage.value =
         error.response?.data?.detail ||
@@ -281,7 +318,7 @@ watch(
   async (page) => {
     const nextPage =
       Number.isInteger(Number(page)) &&
-      Number(page) > 0
+        Number(page) > 0
         ? Number(page)
         : 1;
 
@@ -305,37 +342,21 @@ onMounted(fetchPosts);
           <p>구미 시민과 여행자가 함께하는 정보 공간</p>
         </div>
 
-        <button
-          type="button"
-          class="write-button"
-          @click="goToWrite"
-        >
+        <button type="button" class="write-button" @click="goToWrite">
           <PenLine :size="17" />
           <span>글쓰기</span>
         </button>
       </header>
 
       <section class="search-panel">
-        <form
-          class="search-form"
-          @submit.prevent="submitSearch"
-        >
+        <form class="search-form" @submit.prevent="submitSearch">
           <div class="search-input-wrapper">
             <Search :size="20" />
 
-            <input
-              v-model="searchInput"
-              type="search"
-              placeholder="제목으로 검색..."
-              aria-label="게시글 검색"
-            />
+            <input v-model="searchInput" type="search" placeholder="제목으로 검색..." aria-label="게시글 검색" />
           </div>
 
-          <button
-            type="submit"
-            class="search-button"
-            :disabled="isLoading"
-          >
+          <button type="submit" class="search-button" :disabled="isLoading">
             검색
           </button>
         </form>
@@ -345,49 +366,27 @@ onMounted(fetchPosts);
         총 <strong>{{ totalPosts }}</strong>개의 게시글
       </p>
 
-      <section
-        v-if="isLoading"
-        class="state-panel"
-      >
-        <Loader2
-          :size="34"
-          class="loading-icon"
-        />
+      <section v-if="isLoading" class="state-panel">
+        <Loader2 :size="34" class="loading-icon" />
 
         <p>게시글을 불러오고 있습니다.</p>
       </section>
 
-      <section
-        v-else-if="errorMessage"
-        class="state-panel error-panel"
-      >
+      <section v-else-if="errorMessage" class="state-panel error-panel">
         <AlertCircle :size="36" />
 
         <h2>게시글을 불러오지 못했습니다.</h2>
 
         <p>{{ errorMessage }}</p>
 
-        <button
-          type="button"
-          @click="fetchPosts"
-        >
+        <button type="button" @click="fetchPosts">
           다시 시도
         </button>
       </section>
 
-      <section
-        v-else-if="posts.length"
-        class="post-list"
-      >
-        <article
-          v-for="post in posts"
-          :key="post.id"
-          class="post-card"
-          tabindex="0"
-          role="button"
-          @click="goToDetail(post)"
-          @keydown.enter="goToDetail(post)"
-        >
+      <section v-else-if="posts.length" class="post-list">
+        <article v-for="post in posts" :key="getPostId(post) ?? post.title" class="post-card" tabindex="0" role="button"
+          @click="goToDetail(post)" @keydown.enter="goToDetail(post)">
           <div class="post-card-top">
             <span class="anonymous-badge">
               익명
@@ -405,22 +404,12 @@ onMounted(fetchPosts);
           </p>
 
           <footer class="post-card-actions">
-            <button
-              type="button"
-              class="edit-button"
-              @click.stop="goToEdit(post)"
-              @keydown.stop
-            >
+            <button type="button" class="edit-button" @click.stop="goToEdit(post)" @keydown.stop>
               <Pencil :size="15" />
               수정
             </button>
 
-            <button
-              type="button"
-              class="delete-button"
-              @click.stop="openDeleteModal(post)"
-              @keydown.stop
-            >
+            <button type="button" class="delete-button" @click.stop="openDeleteModal(post)" @keydown.stop>
               <Trash2 :size="15" />
               삭제
             </button>
@@ -428,10 +417,7 @@ onMounted(fetchPosts);
         </article>
       </section>
 
-      <section
-        v-else
-        class="empty-state"
-      >
+      <section v-else class="empty-state">
         <Search :size="36" />
 
         <h2>게시글이 없습니다.</h2>
@@ -441,74 +427,37 @@ onMounted(fetchPosts);
         </p>
       </section>
 
-      <nav
-        v-if="
-          !isLoading &&
-          !errorMessage &&
-          totalPages > 1
-        "
-        class="pagination"
-        aria-label="게시글 페이지 이동"
-      >
-        <button
-          type="button"
-          class="pagination-arrow"
-          :disabled="currentPage === 1"
-          aria-label="이전 페이지"
-          @click="goToPage(currentPage - 1)"
-        >
+      <nav v-if="
+        !isLoading &&
+        !errorMessage &&
+        totalPages > 1
+      " class="pagination" aria-label="게시글 페이지 이동">
+        <button type="button" class="pagination-arrow" :disabled="currentPage === 1" aria-label="이전 페이지"
+          @click="goToPage(currentPage - 1)">
           <ChevronLeft :size="18" />
         </button>
 
-        <button
-          v-for="pageNumber in pageNumbers"
-          :key="pageNumber"
-          type="button"
-          :class="[
-            'pagination-number',
-            {
-              active:
-                currentPage === pageNumber,
-            },
-          ]"
-          @click="goToPage(pageNumber)"
-        >
+        <button v-for="pageNumber in pageNumbers" :key="pageNumber" type="button" :class="[
+          'pagination-number',
+          {
+            active:
+              currentPage === pageNumber,
+          },
+        ]" @click="goToPage(pageNumber)">
           {{ pageNumber }}
         </button>
 
-        <button
-          type="button"
-          class="pagination-arrow"
-          :disabled="
-            currentPage === totalPages
-          "
-          aria-label="다음 페이지"
-          @click="goToPage(currentPage + 1)"
-        >
+        <button type="button" class="pagination-arrow" :disabled="currentPage === totalPages
+          " aria-label="다음 페이지" @click="goToPage(currentPage + 1)">
           <ChevronRight :size="18" />
         </button>
       </nav>
     </div>
 
-    <div
-      v-if="isDeleteModalOpen"
-      class="modal-backdrop"
-      role="presentation"
-      @click.self="closeDeleteModal"
-    >
-      <section
-        class="delete-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="delete-modal-title"
-      >
-        <button
-          type="button"
-          class="modal-close-button"
-          aria-label="삭제 창 닫기"
-          :disabled="isDeleting"
-          @click="closeDeleteModal"
-        >
+    <div v-if="isDeleteModalOpen" class="modal-backdrop" role="presentation" @click.self="closeDeleteModal">
+      <section class="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+        <button type="button" class="modal-close-button" aria-label="삭제 창 닫기" :disabled="isDeleting"
+          @click="closeDeleteModal">
           <X :size="18" />
         </button>
 
@@ -529,10 +478,7 @@ onMounted(fetchPosts);
           {{ deleteTargetPost?.title }}
         </p>
 
-        <form
-          class="delete-form"
-          @submit.prevent="confirmDelete"
-        >
+        <form class="delete-form" @submit.prevent="confirmDelete">
           <label for="delete-password">
             비밀번호
           </label>
@@ -540,49 +486,23 @@ onMounted(fetchPosts);
           <div class="delete-password-wrapper">
             <LockKeyhole :size="18" />
 
-            <input
-              id="delete-password"
-              v-model="deletePassword"
-              type="password"
-              minlength="4"
-              autocomplete="current-password"
-              placeholder="비밀번호 입력"
-              :disabled="isDeleting"
-            />
+            <input id="delete-password" v-model="deletePassword" type="password" minlength="4"
+              autocomplete="current-password" placeholder="비밀번호 입력" :disabled="isDeleting" />
           </div>
 
-          <p
-            v-if="deleteErrorMessage"
-            class="delete-error-message"
-          >
+          <p v-if="deleteErrorMessage" class="delete-error-message">
             {{ deleteErrorMessage }}
           </p>
 
           <div class="modal-actions">
-            <button
-              type="button"
-              class="modal-cancel-button"
-              :disabled="isDeleting"
-              @click="closeDeleteModal"
-            >
+            <button type="button" class="modal-cancel-button" :disabled="isDeleting" @click="closeDeleteModal">
               취소
             </button>
 
-            <button
-              type="submit"
-              class="modal-delete-button"
-              :disabled="isDeleting"
-            >
-              <Loader2
-                v-if="isDeleting"
-                :size="17"
-                class="loading-icon"
-              />
+            <button type="submit" class="modal-delete-button" :disabled="isDeleting">
+              <Loader2 v-if="isDeleting" :size="17" class="loading-icon" />
 
-              <Trash2
-                v-else
-                :size="17"
-              />
+              <Trash2 v-else :size="17" />
 
               {{
                 isDeleting
@@ -992,7 +912,7 @@ onMounted(fetchPosts);
   margin-top: 20px;
 }
 
-.delete-form > label {
+.delete-form>label {
   margin-bottom: 9px;
   color: #0f172a;
   display: block;
