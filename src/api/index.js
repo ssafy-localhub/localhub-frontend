@@ -4,7 +4,7 @@ import axios from "axios";
 const api = axios.create({
   baseURL:
     import.meta.env.VITE_API_BASE_URL ||
-    "https://localhub-backend-5263.onrender.com//api",
+    "https://localhub-backend-5263.onrender.com/api",
 
   timeout: 10000,
 
