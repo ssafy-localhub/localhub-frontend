@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   ChevronRight,
@@ -15,10 +15,15 @@ import {
   ChevronLeft,
   X,
   LockKeyhole,
+  Loader2,
 } from "lucide-vue-next";
-import { getPostDetail, getPostComment, createComment } from "@/api/community.js";
 
-const commentAuthor = ref("");
+import {
+  createComment,
+  deletePost,
+  getPostDetail,
+  likePost,
+} from "@/api/community.js";
 
 const props = defineProps({
   category: {
@@ -42,60 +47,112 @@ const categoryLabels = {
   festival: "축제",
   life: "생활",
   question: "질문",
-  living: "생활"
+  living: "생활",
 };
 
-// API 연동을 위한 상태 관리
 const post = ref(null);
 const comments = ref([]);
+
 const isLoading = ref(true);
+const loadErrorMessage = ref("");
+const isSubmittingPassword = ref(false);
+const isSubmittingComment = ref(false);
+const isLiking = ref(false);
 
 const commentText = ref("");
 const currentCommentPage = ref(1);
 const likedPost = ref(false);
+
 const isPasswordModalOpen = ref(false);
 const passwordAction = ref("");
 const passwordInput = ref("");
 const passwordError = ref("");
 
-// 파라미터에서 ID 추출
-const postId = computed(() => props.id || route.params.id);
+const resolvePostId = (value) => {
+  const resolvedId = Number(value);
 
-// 데이터 가져오기 함수
+  return Number.isInteger(resolvedId) && resolvedId > 0
+    ? resolvedId
+    : null;
+};
+
+const postId = computed(() =>
+  resolvePostId(
+    props.id ||
+    route.params.id ||
+    post.value?.post_id ||
+    post.value?.id,
+  ),
+);
+
 const fetchPostData = async () => {
-  if (!postId.value) return;
-  
+  if (!postId.value) {
+    loadErrorMessage.value = "유효한 게시글 ID가 없습니다.";
+    isLoading.value = false;
+    return;
+  }
+
+  isLoading.value = true;
+  loadErrorMessage.value = "";
+
   try {
-    isLoading.value = true;
-    // 두 API를 병렬로 호출하여 성능 최적화
-    const [postData, commentsData] = await Promise.all([
-      getPostDetail(postId.value),
-      getPostComment(postId.value)
-    ]);
-    
+    const postData = await getPostDetail(postId.value);
+
     post.value = postData;
-    comments.value = commentsData;
+    comments.value = Array.isArray(postData?.comments)
+      ? postData.comments
+      : [];
   } catch (error) {
-    console.error("데이터를 불러오는 중 오류가 발생했습니다:", error);
+    console.error(
+      "게시글 상세 조회 중 오류가 발생했습니다:",
+      error,
+    );
+
+    if (error.response?.status === 404) {
+      loadErrorMessage.value =
+        "존재하지 않거나 삭제된 게시글입니다.";
+    } else if (error.code === "ECONNABORTED") {
+      loadErrorMessage.value =
+        "서버 응답 시간이 초과되었습니다.";
+    } else if (!error.response) {
+      loadErrorMessage.value =
+        error.message ||
+        "게시글 정보를 불러오지 못했습니다.";
+    } else {
+      loadErrorMessage.value =
+        error.response?.data?.detail ||
+        "게시글 정보를 불러오지 못했습니다.";
+    }
   } finally {
     isLoading.value = false;
   }
 };
 
-onMounted(() => {
-  fetchPostData();
+onMounted(fetchPostData);
+
+const categoryLabel = computed(() => {
+  const category =
+    post.value?.category ||
+    props.category ||
+    route.params.category;
+
+  return categoryLabels[category] || "커뮤니티";
 });
 
-const categoryLabel = computed(
-  () => post.value ? (categoryLabels[post.value.category] || "커뮤니티") : "커뮤니티",
-);
-
 const totalCommentPages = computed(() =>
-  Math.max(1, Math.ceil(comments.value.length / COMMENTS_PER_PAGE)),
+  Math.max(
+    1,
+    Math.ceil(
+      comments.value.length / COMMENTS_PER_PAGE,
+    ),
+  ),
 );
 
 const paginatedComments = computed(() => {
-  const startIndex = (currentCommentPage.value - 1) * COMMENTS_PER_PAGE;
+  const startIndex =
+    (currentCommentPage.value - 1) *
+    COMMENTS_PER_PAGE;
+
   return comments.value.slice(
     startIndex,
     startIndex + COMMENTS_PER_PAGE,
@@ -111,47 +168,80 @@ const commentPageNumbers = computed(() =>
 
 const formatDate = (dateTime) => {
   if (!dateTime) return "";
-  return dateTime.slice(0, 10).replaceAll("-", ".");
+
+  return String(dateTime)
+    .slice(0, 10)
+    .replaceAll("-", ".");
 };
 
 const formatNumber = (value) => {
-  if (value === undefined || value === null) return 0;
-  if (value >= 1000) {
-    const converted = value / 1000;
-    return `${Number.isInteger(converted) ? converted : converted.toFixed(1)}K`;
+  const numberValue = Number(value) || 0;
+
+  if (numberValue >= 1000) {
+    const converted = numberValue / 1000;
+
+    return `${Number.isInteger(converted)
+        ? converted
+        : converted.toFixed(1)
+      }K`;
   }
 
-  return value.toLocaleString("ko-KR");
+  return numberValue.toLocaleString("ko-KR");
 };
 
-const togglePostLike = () => {
-  if (!post.value) return;
-  likedPost.value = !likedPost.value;
-  post.value.like_count += likedPost.value ? 1 : -1;
-};
+const togglePostLike = async () => {
+  if (!post.value || !postId.value || isLiking.value) {
+    return;
+  }
 
-const submitComment = async() => {
-  const trimmedText = commentText.value.trim();
-  const trimmedAuthor = commentAuthor.value.trim();
-  if (!trimmedText || !post.value) return;
-  
+  isLiking.value = true;
+
   try {
-    const newComment = await createComment(postId.value, {
-      comment_content: trimmedText,
-      comment_author: trimmedAuthor
-    });
+    await likePost(postId.value);
+
+    likedPost.value = true;
+    post.value.like_count =
+      Number(post.value.like_count || 0) + 1;
+  } catch (error) {
+    console.error("좋아요 요청 실패:", error);
+    window.alert("좋아요 처리에 실패했습니다.");
+  } finally {
+    isLiking.value = false;
+  }
+};
+
+const submitComment = async () => {
+  const trimmedText = commentText.value.trim();
+
+  if (
+    !trimmedText ||
+    !postId.value ||
+    isSubmittingComment.value
+  ) {
+    return;
+  }
+
+  isSubmittingComment.value = true;
+
+  try {
+    const newComment = await createComment(
+      postId.value,
+      trimmedText,
+    );
 
     comments.value.unshift(newComment);
-    
-    post.value.comment_count = comments.value.length;
     commentText.value = "";
-    commentAuthor.value = "";
-    currentCommentPage.value = 1; // 댓글이 작성되면 첫 페이지로 이동
+    currentCommentPage.value = 1;
   } catch (error) {
     console.error("댓글 등록에 실패했습니다:", error);
-    window.alert("댓글 등록에 실패했습니다. 다시 시도해 주세요.");
-  }
 
+    window.alert(
+      error.response?.data?.detail ||
+      "댓글 등록에 실패했습니다.",
+    );
+  } finally {
+    isSubmittingComment.value = false;
+  }
 };
 
 const goToCommentPage = (pageNumber) => {
@@ -166,16 +256,8 @@ const goToCommentPage = (pageNumber) => {
 };
 
 const goBackToList = () => {
-  const category = post.value?.category || props.category || route.params.category;
   router.push({
-    name:
-      category && category !== "all"
-        ? "community-category"
-        : "community",
-    params:
-      category && category !== "all"
-        ? { category }
-        : {},
+    name: "community",
   });
 };
 
@@ -187,35 +269,121 @@ const openPasswordModal = (action) => {
 };
 
 const closePasswordModal = () => {
+  if (isSubmittingPassword.value) {
+    return;
+  }
+
   isPasswordModalOpen.value = false;
+  passwordAction.value = "";
   passwordInput.value = "";
   passwordError.value = "";
 };
 
-const confirmPassword = () => {
-  if (!post.value) return;
-  if (passwordInput.value !== post.value.password) {
-    passwordError.value = "비밀번호가 일치하지 않습니다.";
+const goToEdit = async () => {
+  if (!postId.value) {
+    passwordError.value =
+      "게시글 ID를 확인할 수 없습니다.";
     return;
   }
 
-  if (passwordAction.value === "edit") {
-    closePasswordModal();
-    router.push({
-      name: "community-edit",
-      params: { id: post.value.content_id || postId.value },
-      query: { category: post.value.category },
+  closePasswordModal();
+
+  await router.push({
+    name: "community-edit",
+    params: {
+      id: postId.value,
+    },
+    query: {
+      category:
+        post.value?.category ||
+        props.category ||
+        route.params.category ||
+        "",
+    },
+  });
+};
+
+const deleteCurrentPost = async () => {
+  if (!postId.value) {
+    passwordError.value =
+      "게시글 ID를 확인할 수 없습니다.";
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "게시글을 삭제하시겠습니까?",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  isSubmittingPassword.value = true;
+  passwordError.value = "";
+
+  try {
+    await deletePost(
+      postId.value,
+      passwordInput.value,
+    );
+
+    isPasswordModalOpen.value = false;
+
+    window.alert("게시글이 삭제되었습니다.");
+
+    await router.push({
+      name: "community",
     });
+  } catch (error) {
+    console.error("게시글 삭제 실패:", error);
+
+    const status = error.response?.status;
+
+    if (status === 403) {
+      passwordError.value =
+        "비밀번호가 일치하지 않습니다.";
+    } else if (status === 404) {
+      passwordError.value =
+        "이미 삭제되었거나 존재하지 않는 게시글입니다.";
+    } else if (status === 422) {
+      passwordError.value =
+        "삭제 요청 데이터를 확인해주세요.";
+    } else if (error.code === "ECONNABORTED") {
+      passwordError.value =
+        "서버 응답 시간이 초과되었습니다.";
+    } else {
+      passwordError.value =
+        error.response?.data?.detail ||
+        error.message ||
+        "게시글 삭제에 실패했습니다.";
+    }
+  } finally {
+    isSubmittingPassword.value = false;
+  }
+};
+
+const confirmPassword = async () => {
+  if (!post.value || isSubmittingPassword.value) {
+    return;
+  }
+
+  if (passwordInput.value.length < 4) {
+    passwordError.value =
+      "비밀번호를 4자 이상 입력해주세요.";
+    return;
+  }
+
+  /*
+   * 상세 조회 API는 보안상 게시글 비밀번호를 반환하지 않습니다.
+   * 수정은 수정 화면에서, 삭제는 DELETE API에서 비밀번호를 검증합니다.
+   */
+  if (passwordAction.value === "edit") {
+    await goToEdit();
     return;
   }
 
   if (passwordAction.value === "delete") {
-    const confirmed = window.confirm("게시글을 삭제하시겠습니까?");
-    if (!confirmed) return;
-
-    closePasswordModal();
-    window.alert("더미 데이터 기준으로 삭제 처리되었습니다.");
-    goBackToList();
+    await deleteCurrentPost();
   }
 };
 </script>
@@ -253,7 +421,7 @@ const confirmPassword = () => {
                 <span class="author-avatar">
                   <UserRound :size="15" />
                 </span>
-                <strong>{{ post.author }}</strong>
+                <strong>{{ post.author || "익명" }}</strong>
 
                 <span>
                   <Clock3 :size="15" />
@@ -293,7 +461,8 @@ const confirmPassword = () => {
           </section>
 
           <footer class="post-footer">
-            <button type="button" :class="['like-button', { active: likedPost }]" @click="togglePostLike">
+            <button type="button" :class="['like-button', { active: likedPost }]" :disabled="isLiking || likedPost"
+              @click="togglePostLike">
               <Heart :size="18" :fill="likedPost ? 'currentColor' : 'none'" />
               {{ formatNumber(post.like_count) }}
             </button>
@@ -313,12 +482,7 @@ const confirmPassword = () => {
 
           <form class="comment-form" @submit.prevent="submitComment">
             <div class="comment-author-input">
-              <input 
-                v-model="commentAuthor" 
-                type="text" 
-                placeholder="닉네임 (미입력 시 익명)" 
-                maxlength="10"
-              />
+              <input v-model="commentAuthor" type="text" placeholder="닉네임 (미입력 시 익명)" maxlength="10" />
             </div>
             <textarea v-model="commentText" maxlength="500" placeholder="댓글을 입력해주세요. 서로를 존중하는 댓글 문화를 만들어요 💙"
               aria-label="댓글 내용"></textarea>
@@ -326,26 +490,27 @@ const confirmPassword = () => {
             <div class="comment-form-bottom">
               <span>익명으로 작성됩니다</span>
 
-              <button type="submit" :disabled="!commentText.trim()">
-                <Send :size="16" />
-                등록
+              <button type="submit" :disabled="!commentText.trim() || isSubmittingComment">
+                <Loader2 v-if="isSubmittingComment" :size="16" class="loading-icon" />
+                <Send v-else :size="16" />
+                {{ isSubmittingComment ? "등록 중..." : "등록" }}
               </button>
             </div>
           </form>
 
           <div class="comment-list">
-            <article v-for="comment in paginatedComments" :key="comment.comment_id" class="comment-card">
+            <article v-for="comment in paginatedComments" :key="comment.id ?? comment.comment_id" class="comment-card">
               <span class="comment-avatar">
                 <UserRound :size="15" />
               </span>
 
               <div class="comment-main">
                 <div class="comment-header">
-                  <strong>{{comment.comment_author}}</strong>
+                  <strong>익명</strong>
                   <time>{{ formatDate(comment.created_at) }}</time>
                 </div>
 
-                <p>{{ comment.comment_content }}</p>
+                <p>{{ comment.content ?? comment.comment_content }}</p>
               </div>
             </article>
           </div>
@@ -361,7 +526,7 @@ const confirmPassword = () => {
               {{ pageNumber }}
             </button>
 
-            <button type="button" :disabled="currentCommentPage === totalCommentPages" aria-label="다음 댓글 페이지" 
+            <button type="button" :disabled="currentCommentPage === totalCommentPages" aria-label="다음 댓글 페이지"
               @click="goToCommentPage(currentCommentPage + 1)">
               <ChevronRight :size="17" />
             </button>
@@ -376,7 +541,7 @@ const confirmPassword = () => {
 
       <!-- 데이터를 찾을 수 없는 경우 예외 처리 -->
       <div v-else class="error-state">
-        <p>존재하지 않거나 삭제된 게시글입니다.</p>
+        <p>{{ loadErrorMessage || "존재하지 않거나 삭제된 게시글입니다." }}</p>
         <button type="button" class="back-button" @click="goBackToList">
           <ArrowLeft :size="17" />
           목록으로 돌아가기
@@ -387,7 +552,8 @@ const confirmPassword = () => {
     <!-- 비밀번호 모달 영역 -->
     <div v-if="isPasswordModalOpen" class="modal-backdrop" @click.self="closePasswordModal">
       <section class="password-modal" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
-        <button type="button" class="modal-close" aria-label="닫기" @click="closePasswordModal">
+        <button type="button" class="modal-close" aria-label="닫기" :disabled="isSubmittingPassword"
+          @click="closePasswordModal">
           <X :size="19" />
         </button>
 
@@ -412,12 +578,17 @@ const confirmPassword = () => {
             취소
           </button>
 
-          <button type="button" class="modal-confirm" @click="confirmPassword">
-            확인
+          <button type="button" class="modal-confirm" :disabled="isSubmittingPassword" @click="confirmPassword">
+            <Loader2 v-if="isSubmittingPassword" :size="17" class="loading-icon" />
+            {{
+              isSubmittingPassword
+                ? "처리 중..."
+                : "확인"
+            }}
           </button>
         </div>
 
-        <small>더미 비밀번호: {{ post?.password || '1234' }}</small>
+
       </section>
     </div>
   </main>
@@ -985,11 +1156,14 @@ const confirmPassword = () => {
 }
 
 .comment-author-input input {
-  width: 150px;             /* 적절한 입력창 너비 설정 */
+  width: 150px;
+  /* 적절한 입력창 너비 설정 */
   height: 38px;
   padding: 0 14px;
-  margin-bottom: 10px;      /* 아래 textarea와의 간격 */
-  border: 1px solid #dbe2ea; /* 기존 textarea와 동일한 테두리 색상 */
+  margin-bottom: 10px;
+  /* 아래 textarea와의 간격 */
+  border: 1px solid #dbe2ea;
+  /* 기존 textarea와 동일한 테두리 색상 */
   border-radius: 10px;
   outline: 0;
   background: #ffffff;
@@ -1042,5 +1216,4 @@ const confirmPassword = () => {
     align-items: flex-end;
   }
 }
-
 </style>

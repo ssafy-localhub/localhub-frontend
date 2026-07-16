@@ -66,6 +66,15 @@ const formatDate = (dateTime) => {
     .replaceAll("-", ".");
 };
 
+const getPostId = (post) => {
+  const rawId = post?.post_id ?? post?.id;
+  const resolvedId = Number(rawId);
+
+  return Number.isInteger(resolvedId) && resolvedId > 0
+    ? resolvedId
+    : null;
+};
+
 const buildQuery = () => {
   const query = {};
 
@@ -163,8 +172,15 @@ const goToPage = async (pageNumber) => {
 };
 
 const goToDetail = (post) => {
+  const postId = getPostId(post);
+
+  if (!postId) {
+    console.error("상세 이동에 필요한 게시글 ID가 없습니다.", post);
+    return;
+  }
+
   router.push({
-    path: `/community/post/${post.post_id}`,
+    path: `/community/post/${postId}`,
   });
 };
 
@@ -175,20 +191,35 @@ const goToWrite = () => {
 };
 
 const goToEdit = (post) => {
+  const postId = getPostId(post);
+
+  if (!postId) {
+    console.error("수정에 필요한 게시글 ID가 없습니다.", post);
+    return;
+  }
+
   router.push({
     name: "community-edit",
     params: {
-      id: post.post_id,
+      id: postId,
     },
   });
 };
 
-const stopCardEvent = (event) => {
-  event.stopPropagation();
-};
-
 const openDeleteModal = (post) => {
-  deleteTargetPost.value = post;
+  const postId = getPostId(post);
+
+  if (!postId) {
+    console.error("삭제할 게시글 ID가 없습니다.", post);
+    window.alert("게시글 정보를 확인할 수 없어 삭제할 수 없습니다.");
+    return;
+  }
+
+  deleteTargetPost.value = {
+    ...post,
+    resolvedId: postId,
+  };
+
   deletePassword.value = "";
   deleteErrorMessage.value = "";
   isDeleteModalOpen.value = true;
@@ -217,7 +248,7 @@ const confirmDelete = async () => {
 
   try {
     await deletePost(
-      deleteTargetPost.value.id,
+      deleteTargetPost.value.resolvedId,
       deletePassword.value,
     );
 
@@ -256,7 +287,7 @@ const confirmDelete = async () => {
         "서버 응답 시간이 초과되었습니다. 잠시 후 목록을 확인해주세요.";
     } else if (!error.response) {
       deleteErrorMessage.value =
-        "백엔드 서버에 연결할 수 없습니다.";
+        error.message || "게시글 삭제 중 프론트 오류가 발생했습니다.";
     } else {
       deleteErrorMessage.value =
         error.response?.data?.detail ||
@@ -354,7 +385,7 @@ onMounted(fetchPosts);
       </section>
 
       <section v-else-if="posts.length" class="post-list">
-        <article v-for="post in posts" :key="post.id" class="post-card" tabindex="0" role="button"
+        <article v-for="post in posts" :key="getPostId(post) ?? post.title" class="post-card" tabindex="0" role="button"
           @click="goToDetail(post)" @keydown.enter="goToDetail(post)">
           <div class="post-card-top">
             <span class="anonymous-badge">
