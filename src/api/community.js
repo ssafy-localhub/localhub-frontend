@@ -122,6 +122,7 @@ export async function likePost(postId) {
   return response.status;
 }
 
+
 export async function getPostDetail(postId) {
   if (!postId) {
     throw new Error("게시글 ID가 필요합니다.");
@@ -132,6 +133,10 @@ export async function getPostDetail(postId) {
   );
 
   return response.data;
+}
+export async function getPostComment(postId) {
+  const detail = await getPostDetail(postId);
+  return detail.comments ?? [];
 }
 
 export async function createComment(

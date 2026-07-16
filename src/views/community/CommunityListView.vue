@@ -195,8 +195,6 @@ const openDeleteModal = (post) => {
 };
 
 const closeDeleteModal = () => {
-  if (isDeleting.value) return;
-
   isDeleteModalOpen.value = false;
   deleteTargetPost.value = null;
   deletePassword.value = "";
@@ -204,7 +202,9 @@ const closeDeleteModal = () => {
 };
 
 const confirmDelete = async () => {
-  if (!deleteTargetPost.value || isDeleting.value) return;
+  if (!deleteTargetPost.value || isDeleting.value) {
+    return;
+  }
 
   if (deletePassword.value.length < 4) {
     deleteErrorMessage.value =
@@ -221,10 +221,6 @@ const confirmDelete = async () => {
       deletePassword.value,
     );
 
-    window.alert("게시글이 삭제되었습니다.");
-
-    closeDeleteModal();
-
     if (
       posts.value.length === 1 &&
       currentPage.value > 1
@@ -236,7 +232,14 @@ const confirmDelete = async () => {
       });
     }
 
+    isDeleteModalOpen.value = false;
+    deleteTargetPost.value = null;
+    deletePassword.value = "";
+    deleteErrorMessage.value = "";
+
     await fetchPosts();
+
+    window.alert("게시글이 삭제되었습니다.");
   } catch (error) {
     console.error("게시글 삭제 실패:", error);
 
@@ -248,6 +251,9 @@ const confirmDelete = async () => {
     } else if (status === 404) {
       deleteErrorMessage.value =
         "이미 삭제되었거나 존재하지 않는 게시글입니다.";
+    } else if (error.code === "ECONNABORTED") {
+      deleteErrorMessage.value =
+        "서버 응답 시간이 초과되었습니다. 잠시 후 목록을 확인해주세요.";
     } else if (!error.response) {
       deleteErrorMessage.value =
         "백엔드 서버에 연결할 수 없습니다.";
