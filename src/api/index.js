@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://localhub-backend-5263.onrender.com/api",
+  baseURL: "http://127.0.0.1:8000/api",//"https://localhub-backend-5263.onrender.com/api",
   timeout: 60000,
   headers: { "Content-Type": "application/json", },
 });

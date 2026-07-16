@@ -25,6 +25,9 @@ import {
   likePost,
 } from "@/api/community.js";
 
+const commentAuthor = ref("");
+
+
 const props = defineProps({
   category: {
     type: String,
@@ -212,33 +215,26 @@ const togglePostLike = async () => {
 
 const submitComment = async () => {
   const trimmedText = commentText.value.trim();
+  const trimmedAuthor = commentAuthor.value.trim();
 
-  if (
-    !trimmedText ||
-    !postId.value ||
-    isSubmittingComment.value
-  ) {
-    return;
-  }
-
-  isSubmittingComment.value = true;
+  if (!trimmedText || !post.value) return;
 
   try {
-    const newComment = await createComment(
-      postId.value,
-      trimmedText,
-    );
+    const newComment = await createComment(postId.value, {
+      comment_content: trimmedText,
+      comment_author: commentAuthor.value.trim()
+    });
 
     comments.value.unshift(newComment);
-    commentText.value = "";
-    currentCommentPage.value = 1;
-  } catch (error) {
-    console.error("댓글 등록에 실패했습니다:", error);
 
-    window.alert(
-      error.response?.data?.detail ||
-      "댓글 등록에 실패했습니다.",
-    );
+    post.value.comment_count = comments.value.length;
+    commentText.value = "";
+    commentAuthor.value = "";
+    currentCommentPage.value = 1; // 댓글이 작성되면 첫 페이지로 이동
+    isSubmittingComment.value = true;
+
+  } catch (error) {
+    window.alert("댓글 등록에 실패했습니다. 다시 시도해 주세요.", error);
   } finally {
     isSubmittingComment.value = false;
   }

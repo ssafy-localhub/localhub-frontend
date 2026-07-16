@@ -139,20 +139,13 @@ export async function getPostComment(postId) {
   return detail.comments ?? [];
 }
 
-export async function createComment(
-  postId,
-  content,
-) {
-  if (!postId) {
-    throw new Error("게시글 ID가 필요합니다.");
-  }
-
-  const response = await api.post(
-    `/posts/${postId}/comments/`,
-    {
-      content,
-    },
-  );
-
+/**
+ * 댓글 등록
+ * @param {number|string} post_id - 댓글을 등록할 게시글 ID
+ * @param {Object} commentData - 댓글 데이터 (예: { content: "댓글 내용" })
+ * @returns {Promise<any>} 등록된 댓글 데이터
+ */
+export const createComment = async (post_id, commentData) => {
+  const response = await api.post(`/posts/${post_id}/comments`, commentData);
   return response.data;
-}
+};
