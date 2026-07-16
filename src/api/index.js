@@ -6,7 +6,7 @@ const api = axios.create({
     import.meta.env.VITE_API_BASE_URL ||
     "https://localhub-backend-5263.onrender.com/api",
 
-  timeout: 10000,
+  timeout: 60000,
 
   headers: {
     "Content-Type": "application/json",
